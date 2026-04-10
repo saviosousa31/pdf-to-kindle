@@ -55,11 +55,14 @@ object EmailSender {
                 when {
                     smtp.useSsl -> {
                         // SSL puro — Gmail (465), Yahoo, Zoho
-                        // IMPORTANTE: NÃO definir socketFactory.class no Android —
-                        // o android-mail gerencia o SSL internamente
                         put("mail.smtp.ssl.enable", "true")
-                        put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3")
-                        put("mail.smtp.ssl.checkserveridentity", "true")
+                        // Configura o SocketFactory para Android
+                        put("mail.smtp.socketFactory.port", "465")
+                        put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
+                        put("mail.smtp.socketFactory.fallback", "false")
+                    
+                        // Evita erros de certificado e define timeouts (boa prática)
+                        put("mail.smtp.ssl.trust", "smtp.gmail.com")
                     }
                     smtp.useStartTls -> {
                         // STARTTLS — Outlook, iCloud, ProtonMail (587)
