@@ -39,7 +39,7 @@ jobs:
       - name: Build APK Debug
         run: ./gradlew assembleDebug --no-daemon --stacktrace --info
         env:
-          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m
+          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
 
       - name: Publicar APK
         uses: actions/upload-artifact@v4
