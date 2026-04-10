@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# Gradle startup script for POSIX systems
+#
+
+# Attempt to set APP_HOME
+SAVED="`pwd`"
+cd "`dirname \"$0\"`/" >/dev/null
+APP_HOME="`pwd -P`"
+cd "$SAVED" >/dev/null
+
+APP_NAME="Gradle"
+APP_BASE_NAME=`basename "$0"`
+DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+
+# Use the maximum available, or set MAX_FD != -1 to use that value.
+MAX_FD="maximum"
+
+warn () {
+    echo "$*"
+}
+
+die () {
+    echo
+    echo "$*"
+    echo
+    exit 1
+}
+
+CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+
+# Download wrapper jar if not present
+if [ ! -f "$CLASSPATH" ]; then
+    echo "Downloading Gradle wrapper..."
+    mkdir -p "$APP_HOME/gradle/wrapper"
+    wget -q -O "$CLASSPATH" \
+      "https://raw.githubusercontent.com/gradle/gradle/v8.6.0/gradle/wrapper/gradle-wrapper.jar" \
+    || curl -fsSL -o "$CLASSPATH" \
+      "https://raw.githubusercontent.com/gradle/gradle/v8.6.0/gradle/wrapper/gradle-wrapper.jar" \
+    || die "ERROR: could not download gradle-wrapper.jar"
+fi
+
+# Find java executable
+if [ -n "$JAVA_HOME" ] ; then
+    JAVACMD="$JAVA_HOME/bin/java"
+else
+    JAVACMD="java"
+fi
+
+exec "$JAVACMD" $DEFAULT_JVM_OPTS \
+  -classpath "$CLASSPATH" \
+  org.gradle.wrapper.GradleWrapperMain \
+  "$@"

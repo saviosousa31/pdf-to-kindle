@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="140dp"
+    android:height="210dp"
+    android:viewportWidth="140"
+    android:viewportHeight="210">
+
+    <!-- Fundo: retângulo via <path> (único elemento válido em VectorDrawable) -->
+    <path
+        android:fillColor="#EEF2F7"
+        android:pathData="M0,0 L140,0 L140,210 L0,210 Z" />
+
+    <!-- Capa azul central -->
+    <path
+        android:fillColor="#1565C0"
+        android:fillAlpha="0.3"
+        android:pathData="M45,60 L95,60 L95,150 L45,150 Z" />
+
+    <!-- Linhas simulando texto -->
+    <path
+        android:fillColor="#1565C0"
+        android:fillAlpha="0.5"
+        android:strokeColor="#1565C0"
+        android:strokeWidth="2.5"
+        android:pathData="M50,78 L90,78" />
+    <path
+        android:fillColor="#1565C0"
+        android:fillAlpha="0.5"
+        android:strokeColor="#1565C0"
+        android:strokeWidth="2.5"
+        android:pathData="M50,93 L90,93" />
+    <path
+        android:fillColor="#1565C0"
+        android:fillAlpha="0.5"
+        android:strokeColor="#1565C0"
+        android:strokeWidth="2.5"
+        android:pathData="M50,108 L80,108" />
+    <path
+        android:fillColor="#1565C0"
+        android:fillAlpha="0.5"
+        android:strokeColor="#1565C0"
+        android:strokeWidth="2.5"
+        android:pathData="M50,123 L85,123" />
+
+</vector>
