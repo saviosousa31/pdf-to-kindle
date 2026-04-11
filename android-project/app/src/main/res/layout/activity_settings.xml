@@ -29,7 +29,7 @@
             android:textColor="@color/on_surface_variant"
             android:layout_marginBottom="24dp" />
 
-        <!-- Remetente -->
+        <!-- E-mail remetente -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -68,11 +68,11 @@
             android:textColor="@color/on_surface_variant"
             android:layout_marginBottom="16dp" />
 
-        <!-- Destinatário -->
+        <!-- E-mail destinatário -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="16dp"
             android:hint="E-mail destinatário (quem recebe)"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
             <com.google.android.material.textfield.TextInputEditText
@@ -83,7 +83,7 @@
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- SMTP hint -->
+        <!-- SMTP hint automático -->
         <TextView
             android:id="@+id/tvSmtpHint"
             android:layout_width="match_parent"
@@ -93,43 +93,87 @@
             android:textColor="@color/primary"
             android:background="@color/surface_variant"
             android:padding="12dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="20dp" />
 
-        <!-- SMTP manual (opcional) -->
-        <TextView
+        <!-- ══ Seção Avançado (expansível — Item 1) ══════════════════════════ -->
+        <!-- Cabeçalho clicável -->
+        <LinearLayout
+            android:id="@+id/headerAvancado"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@color/surface_variant"
+            android:paddingHorizontal="12dp"
+            android:layout_marginBottom="0dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="⚙ Avançado  (SMTP manual)"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary" />
+
+            <TextView
+                android:id="@+id/tvAvancadoArrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▶"
+                android:textSize="14sp"
+                android:textColor="@color/primary" />
+        </LinearLayout>
+
+        <!-- Conteúdo expansível -->
+        <LinearLayout
+            android:id="@+id/groupAvancado"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SMTP manual (opcional — deixe em branco para detectar automaticamente)"
-            android:textSize="13sp"
-            android:textColor="@color/on_surface_variant"
-            android:layout_marginBottom="8dp" />
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:background="@color/surface"
+            android:paddingTop="12dp"
+            android:paddingHorizontal="4dp"
+            android:layout_marginBottom="16dp">
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:hint="Servidor SMTP (ex: smtp.gmail.com)"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSmtpHost"
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:text="Deixe em branco para usar a detecção automática pelo domínio."
+                android:textSize="12sp"
+                android:textColor="@color/on_surface_variant"
+                android:layout_marginBottom="12dp" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:hint="Porta SMTP (ex: 587)"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSmtpPort"
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginBottom="12dp"
+                android:hint="Servidor SMTP  (ex: smtp.gmail.com)"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSmtpHost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Porta SMTP  (465 = SSL  |  587 = STARTTLS)"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSmtpPort"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
 
         <!-- Salvar -->
         <com.google.android.material.button.MaterialButton
@@ -139,6 +183,7 @@
             android:text="Salvar Configurações"
             android:textSize="16sp"
             android:textStyle="bold"
+            android:layout_marginTop="8dp"
             app:cornerRadius="8dp" />
 
     </LinearLayout>

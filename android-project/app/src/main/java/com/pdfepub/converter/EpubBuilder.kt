@@ -35,7 +35,7 @@ object EpubBuilder {
         title: String,
         author: String,
         chapters: List<PdfChapter>,
-        coverBytes: ByteArray,
+        coverBytes: ByteArray?,
         onProgress: (Int, Int) -> Unit = { _, _ -> }
     ): Uri = withContext(Dispatchers.IO) {
 
@@ -73,17 +73,17 @@ object EpubBuilder {
     <dc:creator>$ea</dc:creator>
     <dc:language>pt</dc:language>
     <dc:date>$date</dc:date>
-    <meta name="cover" content="cover-image"/>
+    ${if (coverBytes != null) "<meta name=\"cover\" content=\"cover-image\"/>" else ""}
   </metadata>
   <manifest>
     <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
-    <item id="cover-page" href="cover.xhtml" media-type="application/xhtml+xml"/>
-    <item id="cover-image" href="images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>
+    ${if (coverBytes != null) "<item id=\"cover-page\" href=\"cover.xhtml\" media-type=\"application/xhtml+xml\"/>" else ""}
+    ${if (coverBytes != null) "<item id=\"cover-image\" href=\"images/cover.jpg\" media-type=\"image/jpeg\" properties=\"cover-image\"/>" else ""}
     <item id="css" href="style.css" media-type="text/css"/>
 $items  </manifest>
   <spine toc="ncx">
-    <itemref idref="cover-page"/>
+    ${if (coverBytes != null) "<itemref idref=\"cover-page\"/>" else ""}
 $refs  </spine>
 </package>"""
 
@@ -93,7 +93,7 @@ $refs  </spine>
   <head><meta name="dtb:uid" content="$uid"/></head>
   <docTitle><text>$et</text></docTitle>
   <navMap>
-    <navPoint id="cover" playOrder="1"><navLabel><text>Capa</text></navLabel><content src="cover.xhtml"/></navPoint>
+    ${if (coverBytes != null) "<navPoint id=\"cover\" playOrder=\"1\"><navLabel><text>Capa</text></navLabel><content src=\"cover.xhtml\"/></navPoint>" else ""}
 $navPts  </navMap>
 </ncx>"""
 
@@ -102,7 +102,7 @@ $navPts  </navMap>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head><meta charset="UTF-8"/><title>Índice</title></head>
 <body><nav epub:type="toc" id="toc"><h1>Índice</h1><ol>
-<li><a href="cover.xhtml">Capa</a></li>
+${if (coverBytes != null) "<li><a href=\"cover.xhtml\">Capa</a></li>" else ""}
 $navLi</ol></nav></body></html>"""
 
         val css = """body{font-family:Georgia,"Times New Roman",serif;font-size:1em;line-height:1.75;color:#1a1a1a;margin:0;padding:0;}
@@ -149,8 +149,10 @@ p{margin:.55em 0;text-align:justify;text-indent:1.3em;}p:first-of-type{text-inde
             addStr("OEBPS/toc.ncx", ncx)
             addStr("OEBPS/nav.xhtml", nav)
             addStr("OEBPS/style.css", css)
-            addStr("OEBPS/cover.xhtml", coverXhtml)
-            addEntry("OEBPS/images/cover.jpg", coverBytes)
+            if (coverBytes != null) {
+                addStr("OEBPS/cover.xhtml", coverXhtml)
+                addEntry("OEBPS/images/cover.jpg", coverBytes)
+            }
 
             val total = chapters.size
             chapters.forEachIndexed { idx, ch ->

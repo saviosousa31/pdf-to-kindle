@@ -1,5 +1,7 @@
 package com.pdfepub.converter
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
+import com.google.android.material.card.MaterialCardView
 
 class CoverAdapter(
     private val onSelected: (String) -> Unit
@@ -16,6 +19,8 @@ class CoverAdapter(
     private val items = mutableListOf<String>()
     var selectedUrl: String? = null
         private set
+
+    private val COLOR_SELECTED = Color.parseColor("#2E7D32")  // success green
 
     fun addItems(urls: List<String>) {
         val start = items.size
@@ -31,13 +36,24 @@ class CoverAdapter(
     }
 
     inner class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val image: ImageView = itemView.findViewById(R.id.imgCover)
-        val check: View      = itemView.findViewById(R.id.viewSelected)
+        val card : MaterialCardView = itemView.findViewById(R.id.cardItem)
+        val image: ImageView        = itemView.findViewById(R.id.imgCover)
+        val badge: View             = itemView.findViewById(R.id.viewSelected)
 
         fun bind(url: String) {
             val selected = (url == selectedUrl)
-            check.visibility = if (selected) View.VISIBLE else View.GONE
-            itemView.alpha  = if (selected) 1f else 0.75f
+
+            // Borda verde + badge de check quando selecionado
+            if (selected) {
+                card.strokeWidth = 6
+                card.strokeColor = COLOR_SELECTED
+                badge.visibility = View.VISIBLE
+            } else {
+                card.strokeWidth = 0
+                badge.visibility = View.GONE
+            }
+
+            itemView.alpha  = if (selected) 1f else 0.80f
             itemView.scaleX = if (selected) 1f else 0.95f
             itemView.scaleY = if (selected) 1f else 0.95f
 
@@ -56,7 +72,6 @@ class CoverAdapter(
             itemView.setOnClickListener {
                 val old = selectedUrl
                 selectedUrl = url
-                // [I] CORRIGIDO: bindingAdapterPosition substitui adapterPosition (deprecated)
                 val newPos = bindingAdapterPosition
                 if (newPos == RecyclerView.NO_ID.toInt()) return@setOnClickListener
                 old?.let { o ->
@@ -70,7 +85,8 @@ class CoverAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_cover, parent, false)
+        val v = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_cover, parent, false)
         return VH(v)
     }
 
