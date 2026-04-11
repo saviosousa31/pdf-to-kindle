@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Header -->
+        <!-- Header: título + botão Config (somente ícone) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -29,13 +29,16 @@
                 android:textStyle="bold"
                 android:textColor="@color/primary" />
 
+            <!-- Item 4: somente ícone de configurações -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSettings"
                 style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="⚙ Config"
-                android:textSize="13sp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:icon="@android:drawable/ic_menu_preferences"
+                app:iconSize="24dp"
+                app:iconGravity="textStart"
+                android:contentDescription="Configurações"
                 app:strokeColor="@color/primary"
                 app:strokeWidth="1dp" />
         </LinearLayout>
@@ -50,7 +53,7 @@
             android:textColor="@color/on_surface_variant"
             android:layout_marginBottom="16dp" />
 
-        <!-- Card: Selecionar PDF -->
+        <!-- Card: Arquivo PDF -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardPdf"
             android:layout_width="match_parent"
@@ -96,7 +99,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Card: Capa -->
+        <!-- Card: Capa do Livro -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardCover"
             android:layout_width="match_parent"
@@ -131,6 +134,17 @@
                     app:cornerRadius="8dp"
                     android:layout_marginBottom="12dp" />
 
+                <!-- Item 3: Converter sem capa (visível sem precisar buscar) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnConvertNoCover"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="⚡ Converter sem Capa"
+                    android:textSize="14sp"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    app:cornerRadius="8dp"
+                    android:layout_marginBottom="8dp" />
+
                 <TextView
                     android:id="@+id/tvCoverHint"
                     android:layout_width="match_parent"
@@ -158,20 +172,12 @@
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="4dp" />
 
-                <TextView
-                    android:id="@+id/tvSelectedCover"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="✓ Capa selecionada"
-                    android:textSize="14sp"
-                    android:textColor="@color/success"
-                    android:textStyle="bold"
-                    android:visibility="gone"
-                    android:layout_marginTop="8dp" />
+                <!-- Item 5: tvSelectedCover removido — indicação é a borda verde na imagem -->
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Card: Converter -->
+        <!-- Card: Conversão (some após sucesso — item 6) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardConvert"
             android:layout_width="match_parent"
@@ -200,9 +206,10 @@
                     android:id="@+id/btnConvert"
                     android:layout_width="match_parent"
                     android:layout_height="60dp"
-                    android:text="Converter para EPUB"
+                    android:text="🖼 Converter para EPUB"
                     android:textSize="18sp"
                     android:textStyle="bold"
+                    android:enabled="false"
                     app:cornerRadius="8dp"
                     android:layout_marginBottom="12dp" />
 
@@ -226,7 +233,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Card: Resultado -->
+        <!-- Card: Resultado (aparece no lugar do cardConvert — item 6) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardResult"
             android:layout_width="match_parent"
@@ -267,8 +274,7 @@
                     android:layout_height="56dp"
                     android:text="🔄 Converter Novo Arquivo"
                     android:textSize="16sp"
-                    app:cornerRadius="8dp"
-                    android:visibility="gone" />
+                    app:cornerRadius="8dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

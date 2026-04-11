@@ -17,46 +17,50 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
-    // State
-    private var pdfUri: Uri? = null
-    private var pdfTitle = ""
-    private var pdfAuthor = ""
-    private var allCoverUrls = listOf<String>()
-    private var shownCount = 0
-    private var selectedCoverUrl: String? = null
+    // ── Estado ───────────────────────────────────────────────────────────────
+    private var pdfUri            : Uri?       = null
+    private var pdfTitle          = ""
+    private var pdfAuthor         = ""
+    private var allCoverUrls      = listOf<String>()
+    private var shownCount        = 0
+    private var selectedCoverUrl  : String?    = null
     private var selectedCoverBytes: ByteArray? = null
-    private var epubUri: Uri? = null
-    private var epubFilename = ""
+    private var epubUri           : Uri?       = null
+    private var epubFilename      = ""
+    private var conversionJob     : Job?       = null
 
-    // Views
-    private lateinit var tvStatus: TextView
-    private lateinit var cardPdf: MaterialCardView
-    private lateinit var tvPdfName: TextView
-    private lateinit var btnSelect: MaterialButton
-    private lateinit var cardCover: MaterialCardView
-    private lateinit var btnSearchCover: MaterialButton
-    private lateinit var rvCovers: RecyclerView
-    private lateinit var btnLoadMore: MaterialButton
-    private lateinit var tvCoverHint: TextView
-    private lateinit var tvSelectedCover: TextView
-    private lateinit var cardConvert: MaterialCardView
-    private lateinit var btnConvert: MaterialButton
-    private lateinit var progressConvert: LinearProgressIndicator
-    private lateinit var tvProgress: TextView
-    private lateinit var cardResult: MaterialCardView
-    private lateinit var tvResult: TextView
-    private lateinit var btnEmail: MaterialButton
-    private lateinit var btnNew: MaterialButton
-    private lateinit var btnSettings: MaterialButton
+    // ── Views ────────────────────────────────────────────────────────────────
+    private lateinit var tvStatus        : TextView
+    private lateinit var cardPdf         : MaterialCardView
+    private lateinit var tvPdfName       : TextView
+    private lateinit var btnSelect       : MaterialButton
+    private lateinit var cardCover       : MaterialCardView
+    private lateinit var btnSearchCover  : MaterialButton
+    private lateinit var btnConvertNoCover: MaterialButton
+    private lateinit var rvCovers        : RecyclerView
+    private lateinit var btnLoadMore     : MaterialButton
+    private lateinit var tvCoverHint     : TextView
+    private lateinit var cardConvert     : MaterialCardView
+    private lateinit var btnConvert      : MaterialButton
+    private lateinit var progressConvert : LinearProgressIndicator
+    private lateinit var tvProgress      : TextView
+    private lateinit var cardResult      : MaterialCardView
+    private lateinit var tvResult        : TextView
+    private lateinit var btnEmail        : MaterialButton
+    private lateinit var btnNew          : MaterialButton
+    private lateinit var btnSettings     : MaterialButton
 
     private lateinit var coverAdapter: CoverAdapter
 
     private val PDF_PICK = 101
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,35 +72,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindViews() {
-        tvStatus        = findViewById(R.id.tvStatus)
-        cardPdf         = findViewById(R.id.cardPdf)
-        tvPdfName       = findViewById(R.id.tvPdfName)
-        btnSelect       = findViewById(R.id.btnSelect)
-        cardCover       = findViewById(R.id.cardCover)
-        btnSearchCover  = findViewById(R.id.btnSearchCover)
-        rvCovers        = findViewById(R.id.rvCovers)
-        btnLoadMore     = findViewById(R.id.btnLoadMore)
-        tvCoverHint     = findViewById(R.id.tvCoverHint)
-        tvSelectedCover = findViewById(R.id.tvSelectedCover)
-        cardConvert     = findViewById(R.id.cardConvert)
-        btnConvert      = findViewById(R.id.btnConvert)
-        progressConvert = findViewById(R.id.progressConvert)
-        tvProgress      = findViewById(R.id.tvProgress)
-        cardResult      = findViewById(R.id.cardResult)
-        tvResult        = findViewById(R.id.tvResult)
-        btnEmail        = findViewById(R.id.btnEmail)
-        btnNew          = findViewById(R.id.btnNew)
-        btnSettings     = findViewById(R.id.btnSettings)
+        tvStatus         = findViewById(R.id.tvStatus)
+        cardPdf          = findViewById(R.id.cardPdf)
+        tvPdfName        = findViewById(R.id.tvPdfName)
+        btnSelect        = findViewById(R.id.btnSelect)
+        cardCover        = findViewById(R.id.cardCover)
+        btnSearchCover   = findViewById(R.id.btnSearchCover)
+        btnConvertNoCover= findViewById(R.id.btnConvertNoCover)
+        rvCovers         = findViewById(R.id.rvCovers)
+        btnLoadMore      = findViewById(R.id.btnLoadMore)
+        tvCoverHint      = findViewById(R.id.tvCoverHint)
+        cardConvert      = findViewById(R.id.cardConvert)
+        btnConvert       = findViewById(R.id.btnConvert)
+        progressConvert  = findViewById(R.id.progressConvert)
+        tvProgress       = findViewById(R.id.tvProgress)
+        cardResult       = findViewById(R.id.cardResult)
+        tvResult         = findViewById(R.id.tvResult)
+        btnEmail         = findViewById(R.id.btnEmail)
+        btnNew           = findViewById(R.id.btnNew)
+        btnSettings      = findViewById(R.id.btnSettings)
     }
 
     private fun setupCoverRecycler() {
         coverAdapter = CoverAdapter { url ->
             selectedCoverUrl = url
-            tvSelectedCover.text = "✓ Capa selecionada"
-            tvSelectedCover.visibility = View.VISIBLE
+            // Borda verde no item indica seleção; exibe o card de conversão
             cardConvert.visibility = View.VISIBLE
+            cardResult.visibility  = View.GONE   // garante que resultado anterior some
+            btnConvert.isEnabled   = true
         }
-        rvCovers.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        rvCovers.layoutManager =
+            LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         rvCovers.adapter = coverAdapter
     }
 
@@ -110,38 +116,60 @@ class MainActivity : AppCompatActivity() {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "application/pdf"
             }
+            @Suppress("DEPRECATION")
             startActivityForResult(intent, PDF_PICK)
         }
 
-        btnSearchCover.setOnClickListener { searchCovers() }
-
-        btnLoadMore.setOnClickListener { showMoreCovers() }
-
-        btnConvert.setOnClickListener { startConversion() }
-
-        btnEmail.setOnClickListener { sendEmail() }
-
-        btnNew.setOnClickListener { resetAll() }
+        btnSearchCover.setOnClickListener    { searchCovers() }
+        btnLoadMore.setOnClickListener       { showMoreCovers() }
+        btnConvert.setOnClickListener        { startConversion(withCover = true) }
+        btnConvertNoCover.setOnClickListener { startConversion(withCover = false) }
+        btnEmail.setOnClickListener          { sendEmail() }
+        btnNew.setOnClickListener            { resetAll() }
     }
 
+    // ── Item 2: Reset TOTAL ao selecionar novo PDF ────────────────────────────
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == PDF_PICK && resultCode == Activity.RESULT_OK) {
             data?.data?.let { uri ->
-                pdfUri = uri
-                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                // Cancela qualquer conversão em andamento
+                conversionJob?.cancel()
+                conversionJob = null
+
+                pdfUri             = uri
+                pdfTitle           = ""
+                pdfAuthor          = ""
+                allCoverUrls       = emptyList()
+                shownCount         = 0
+                selectedCoverUrl   = null
+                selectedCoverBytes = null
+                epubUri            = null
+                epubFilename       = ""
+
+                contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
                 val filename = getFilename(uri)
                 val (title, author) = PdfExtractor.parseFilename(filename)
                 pdfTitle  = title
                 pdfAuthor = author
                 tvPdfName.text = filename
+
+                // Limpa toda UI de capa, conversão e resultado
                 coverAdapter.clear()
-                allCoverUrls  = emptyList()
-                shownCount    = 0
-                selectedCoverUrl   = null
-                selectedCoverBytes = null
-                epubUri = null
+                tvCoverHint.visibility     = View.GONE
+                btnLoadMore.visibility     = View.GONE
+                btnSearchCover.text        = "Buscar Capa"
+                btnSearchCover.isEnabled   = true
+                btnConvert.isEnabled       = false
+                progressConvert.visibility = View.GONE
+                tvProgress.visibility      = View.GONE
+                cardConvert.visibility     = View.GONE
+                cardResult.visibility      = View.GONE
+
+                cacheDir.listFiles()?.forEach { it.delete() }
                 updateUI()
             }
         }
@@ -158,21 +186,20 @@ class MainActivity : AppCompatActivity() {
         return name
     }
 
-    // ── Cover Search ─────────────────────────────────────────────────────────
+    // ── Busca de Capas ────────────────────────────────────────────────────────
 
     private fun searchCovers() {
         coverAdapter.clear()
-        allCoverUrls = emptyList()
-        shownCount   = 0
-        selectedCoverUrl = null
+        allCoverUrls       = emptyList()
+        shownCount         = 0
+        selectedCoverUrl   = null
         selectedCoverBytes = null
-        tvSelectedCover.visibility = View.GONE
-        cardConvert.visibility = View.GONE
+        btnConvert.isEnabled = false
 
         btnSearchCover.isEnabled = false
-        btnSearchCover.text = "Buscando..."
-        tvCoverHint.text = "Buscando capas na internet…"
-        tvCoverHint.visibility = View.VISIBLE
+        btnSearchCover.text      = "Buscando..."
+        tvCoverHint.text         = "Buscando capas na internet…"
+        tvCoverHint.visibility   = View.VISIBLE
 
         lifecycleScope.launch {
             val urls = CoverSearcher.searchAll(pdfTitle, pdfAuthor)
@@ -187,72 +214,79 @@ class MainActivity : AppCompatActivity() {
             }
 
             btnSearchCover.isEnabled = true
-            btnSearchCover.text = "Buscar Capa Novamente"
+            btnSearchCover.text      = "Buscar Capa Novamente"
         }
     }
 
     private fun showMoreCovers() {
-        val PAGE = 10
+        val PAGE     = 10
         val nextUrls = allCoverUrls.drop(shownCount).take(PAGE)
-        if (nextUrls.isEmpty()) {
-            btnLoadMore.visibility = View.GONE
-            return
-        }
+        if (nextUrls.isEmpty()) { btnLoadMore.visibility = View.GONE; return }
         coverAdapter.addItems(nextUrls)
         shownCount += nextUrls.size
-        btnLoadMore.visibility = if (shownCount < allCoverUrls.size) View.VISIBLE else View.GONE
+        btnLoadMore.visibility =
+            if (shownCount < allCoverUrls.size) View.VISIBLE else View.GONE
     }
 
-    // ── Conversion ───────────────────────────────────────────────────────────
+    // ── Conversão ─────────────────────────────────────────────────────────────
 
-    private fun startConversion() {
+    private fun startConversion(withCover: Boolean) {
         val uri = pdfUri ?: return
-        val coverUrl = selectedCoverUrl ?: return
+        if (withCover && selectedCoverUrl == null) {
+            showError("Selecione uma capa primeiro, ou use o botão '⚡ Converter sem Capa'.")
+            return
+        }
 
-        btnConvert.isEnabled = false
+        // Mostra o cardConvert com progresso, esconde o resultado anterior
+        cardConvert.visibility     = View.VISIBLE
+        cardResult.visibility      = View.GONE
+        btnConvert.isEnabled       = false
+        btnConvertNoCover.isEnabled= false
         progressConvert.visibility = View.VISIBLE
-        tvProgress.visibility = View.VISIBLE
+        tvProgress.visibility      = View.VISIBLE
         progressConvert.isIndeterminate = false
-        progressConvert.progress = 0
+        progressConvert.progress   = 0
 
-        lifecycleScope.launch {
+        conversionJob = lifecycleScope.launch {
             try {
-                // 1. Download cover
-                tvProgress.text = "Baixando capa…"
-                progressConvert.isIndeterminate = true
-                val cover = withContext(Dispatchers.IO) {
-                    CoverSearcher.downloadBytes(coverUrl)
-                } ?: throw Exception("Falha ao baixar capa. Tente outra imagem.")
-                selectedCoverBytes = cover
+                var cover: ByteArray? = null
 
-                // 2. Extract PDF text
-                progressConvert.isIndeterminate = false
-                tvProgress.text = "Extraindo texto do PDF…"
-                val pages = PdfExtractor.extract(this@MainActivity, uri) { cur, tot ->
-                    val pct = (cur * 50) / tot
-                    progressConvert.progress = pct
-                    tvProgress.text = "Extraindo texto… página $cur/$tot"
+                if (withCover) {
+                    tvProgress.text = "Baixando capa…"
+                    progressConvert.isIndeterminate = true
+                    cover = withContext(Dispatchers.IO) {
+                        CoverSearcher.downloadBytes(selectedCoverUrl!!)
+                    } ?: throw Exception("Falha ao baixar capa. Tente outra imagem.")
+                    selectedCoverBytes = cover
+                    progressConvert.isIndeterminate = false
                 }
 
-                // 3. Group chapters
+                tvProgress.text = "Extraindo texto do PDF…"
+                val offsetEnd = if (withCover) 50 else 80
+                val pages = PdfExtractor.extract(this@MainActivity, uri) { cur, tot ->
+                    val pct = (cur * offsetEnd) / tot
+                    progressConvert.progress = pct
+                    tvProgress.text = "Extraindo… página $cur/$tot"
+                }
+
                 val chapters = PdfExtractor.groupIntoChapters(pages)
                 tvProgress.text = "Organizando ${chapters.size} capítulo(s)…"
 
-                // 4. Build EPUB
                 epubFilename = buildString {
                     append(pdfTitle.ifBlank { "Livro" })
                     if (pdfAuthor.isNotBlank()) append(" - $pdfAuthor")
                     append(".epub")
                 }.replace(Regex("[\\\\/:*?\"<>|]"), "")
 
+                val progressBase = if (withCover) 50 else 20
                 val result = EpubBuilder.build(
-                    context  = this@MainActivity,
-                    title    = pdfTitle,
-                    author   = pdfAuthor,
-                    chapters = chapters,
+                    context    = this@MainActivity,
+                    title      = pdfTitle,
+                    author     = pdfAuthor,
+                    chapters   = chapters,
                     coverBytes = cover
                 ) { cur, tot ->
-                    val pct = 50 + (cur * 50) / tot
+                    val pct = progressBase + (cur * (100 - progressBase)) / tot
                     progressConvert.progress = pct
                     tvProgress.text = "Montando EPUB… $cur/$tot"
                 }
@@ -261,36 +295,41 @@ class MainActivity : AppCompatActivity() {
                 progressConvert.progress = 100
                 tvProgress.text = "Concluído!"
 
-                // Show result
-                cardResult.visibility = View.VISIBLE
-                tvResult.text = "✓ EPUB salvo em Downloads:\n$epubFilename"
+                // ── Item 6: esconde cardConvert, exibe cardResult no lugar ──
+                cardConvert.visibility = View.GONE
+                cardResult.visibility  = View.VISIBLE
+                tvResult.text =
+                    "✓ EPUB salvo em Downloads" +
+                    (if (!withCover) " (sem capa)" else "") +
+                    ":\n$epubFilename"
                 btnEmail.isEnabled = Prefs.isEmailConfigured(this@MainActivity)
-                btnNew.visibility = View.VISIBLE
 
-                // Cleanup cache
                 cacheDir.listFiles()?.forEach { it.delete() }
 
             } catch (e: Exception) {
-                progressConvert.visibility = View.GONE
-                tvProgress.visibility = View.GONE
-                btnConvert.isEnabled = true
+                progressConvert.visibility  = View.GONE
+                tvProgress.visibility       = View.GONE
+                btnConvert.isEnabled        = (selectedCoverUrl != null)
+                btnConvertNoCover.isEnabled = true
                 showError("Erro na conversão: ${e.message}")
             }
         }
     }
 
-    // ── Email ────────────────────────────────────────────────────────────────
+    // ── E-mail ────────────────────────────────────────────────────────────────
 
     private fun sendEmail() {
         val uri = epubUri ?: return
         btnEmail.isEnabled = false
-        btnEmail.text = "Enviando…"
+        btnEmail.text      = "Enviando…"
 
         lifecycleScope.launch {
             val result = EmailSender.send(this@MainActivity, uri, epubFilename)
             if (result.success) {
-                Snackbar.make(findViewById(android.R.id.content),
-                    "✓ EPUB enviado por e-mail!", Snackbar.LENGTH_LONG).show()
+                Snackbar.make(
+                    findViewById(android.R.id.content),
+                    "✓ EPUB enviado por e-mail!", Snackbar.LENGTH_LONG
+                ).show()
             } else {
                 showError(result.error)
                 btnEmail.isEnabled = true
@@ -299,9 +338,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Reset ────────────────────────────────────────────────────────────────
+    // ── Reset ─────────────────────────────────────────────────────────────────
 
     private fun resetAll() {
+        conversionJob?.cancel()
+        conversionJob      = null
         pdfUri             = null
         pdfTitle           = ""
         pdfAuthor          = ""
@@ -312,34 +353,40 @@ class MainActivity : AppCompatActivity() {
         epubUri            = null
         epubFilename       = ""
 
-        tvPdfName.text = ""
+        tvPdfName.text             = "Nenhum arquivo selecionado"
         coverAdapter.clear()
-        tvSelectedCover.visibility = View.GONE
-        tvCoverHint.visibility = View.GONE
+        tvCoverHint.visibility     = View.GONE
+        btnLoadMore.visibility     = View.GONE
         progressConvert.visibility = View.GONE
-        tvProgress.visibility = View.GONE
-        cardResult.visibility = View.GONE
-        btnNew.visibility = View.GONE
-        btnSearchCover.text = "Buscar Capa"
-        btnConvert.isEnabled = true
-        btnEmail.text = "Enviar por E-mail"
+        tvProgress.visibility      = View.GONE
+        cardConvert.visibility     = View.GONE
+        cardResult.visibility      = View.GONE
+        btnSearchCover.text        = "Buscar Capa"
+        btnSearchCover.isEnabled   = true
+        btnConvert.isEnabled       = false
+        btnConvertNoCover.isEnabled= true
+        btnEmail.text              = "Enviar por E-mail"
 
         cacheDir.listFiles()?.forEach { it.delete() }
         updateUI()
     }
 
-    // ── UI State ─────────────────────────────────────────────────────────────
+    // ── UI State ──────────────────────────────────────────────────────────────
 
     private fun updateUI() {
-        val hasPdf = pdfUri != null
-        cardCover.visibility   = if (hasPdf) View.VISIBLE else View.GONE
-        cardConvert.visibility = if (hasPdf && selectedCoverUrl != null) View.VISIBLE else View.GONE
-        cardResult.visibility  = if (epubUri != null) View.VISIBLE else View.GONE
+        val hasPdf  = pdfUri != null
+        val hasEpub = epubUri != null
 
-        if (hasPdf) {
-            tvStatus.text = "PDF selecionado. Agora busque a capa."
-        } else {
-            tvStatus.text = "Selecione um arquivo PDF para começar."
+        cardCover.visibility   = if (hasPdf) View.VISIBLE else View.GONE
+        // cardConvert só fica visível se há capa selecionada E ainda não gerou EPUB
+        cardConvert.visibility = if (hasPdf && selectedCoverUrl != null && !hasEpub) View.VISIBLE else View.GONE
+        // cardResult só fica visível quando o EPUB foi gerado
+        cardResult.visibility  = if (hasEpub) View.VISIBLE else View.GONE
+
+        tvStatus.text = when {
+            !hasPdf   -> "Selecione um arquivo PDF para começar."
+            hasEpub   -> "EPUB gerado com sucesso!"
+            else      -> "PDF selecionado. Busque uma capa ou converta diretamente."
         }
     }
 

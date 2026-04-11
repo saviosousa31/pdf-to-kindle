@@ -41,7 +41,8 @@ object EmailSender {
             return@withContext Result(false, "Configure o e-mail nas Configurações.")
         }
 
-        val epubBytes: ByteArray = context.contentResolver.openInputStream(epubUri)?.use { it.readBytes() }
+        val epubBytes: ByteArray = context.contentResolver.openInputStream(epubUri)
+            ?.use { it.readBytes() }
             ?: return@withContext Result(false, "Não foi possível ler o arquivo EPUB.")
 
         try {
@@ -90,9 +91,7 @@ object EmailSender {
 
             val encodedFilename: String = try {
                 MimeUtility.encodeText(filename, "UTF-8", "B")
-            } catch (e: Exception) {
-                filename
-            }
+            } catch (e: Exception) { filename }
 
             val epubData: ByteArray = epubBytes
             val part = MimeBodyPart()
@@ -112,9 +111,15 @@ object EmailSender {
             Result(true)
 
         } catch (e: AuthenticationFailedException) {
-            Result(false, "Falha de autenticação.\nPara Gmail: acesse myaccount.google.com/apppasswords e use uma Senha de App.")
+            Result(
+                false,
+                "Falha de autenticação.\n" +
+                "• Gmail: acesse myaccount.google.com/apppasswords e use uma Senha de App.\n" +
+                "• Outlook: verifique se o SMTP está habilitado.\n" +
+                "Detalhe: ${e.message}"
+            )
         } catch (e: MessagingException) {
-            Result(false, "Erro ao enviar: ${e.message}")
+            Result(false, "Erro ao enviar: ${e.message}\n\nHost: ${smtp.host}:${smtp.port}")
         } catch (e: Exception) {
             Result(false, "Erro inesperado: ${e.message}")
         }
