@@ -231,7 +231,7 @@ class MainActivity : AppCompatActivity() {
     private fun startConversion(withCover: Boolean) {
         val uri = pdfUri ?: return
         if (withCover && selectedCoverUrl == null) {
-            showError("Selecione uma capa primeiro, ou use "⚡ Converter sem Capa".")
+            showError("Selecione uma capa primeiro, ou use '⚡ Converter sem Capa'.")
             return
         }
 
