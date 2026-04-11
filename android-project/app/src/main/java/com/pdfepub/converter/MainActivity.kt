@@ -96,8 +96,10 @@ class MainActivity : AppCompatActivity() {
     private fun setupCoverRecycler() {
         coverAdapter = CoverAdapter { url ->
             selectedCoverUrl = url
-            // Item 5: sem label — borda verde no item já indica seleção
-            btnConvert.isEnabled = true
+            // Borda verde no item indica seleção; exibe o card de conversão
+            cardConvert.visibility = View.VISIBLE
+            cardResult.visibility  = View.GONE   // garante que resultado anterior some
+            btnConvert.isEnabled   = true
         }
         rvCovers.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -231,7 +233,7 @@ class MainActivity : AppCompatActivity() {
     private fun startConversion(withCover: Boolean) {
         val uri = pdfUri ?: return
         if (withCover && selectedCoverUrl == null) {
-            showError("Selecione uma capa primeiro, ou use '⚡ Converter sem Capa'.")
+            showError("Selecione uma capa primeiro, ou use o botão '⚡ Converter sem Capa'.")
             return
         }
 
@@ -372,13 +374,19 @@ class MainActivity : AppCompatActivity() {
     // ── UI State ──────────────────────────────────────────────────────────────
 
     private fun updateUI() {
-        val hasPdf = pdfUri != null
-        cardCover.visibility = if (hasPdf) View.VISIBLE else View.GONE
+        val hasPdf  = pdfUri != null
+        val hasEpub = epubUri != null
+
+        cardCover.visibility   = if (hasPdf) View.VISIBLE else View.GONE
+        // cardConvert só fica visível se há capa selecionada E ainda não gerou EPUB
+        cardConvert.visibility = if (hasPdf && selectedCoverUrl != null && !hasEpub) View.VISIBLE else View.GONE
+        // cardResult só fica visível quando o EPUB foi gerado
+        cardResult.visibility  = if (hasEpub) View.VISIBLE else View.GONE
 
         tvStatus.text = when {
-            !hasPdf      -> "Selecione um arquivo PDF para começar."
-            epubUri != null -> "EPUB gerado com sucesso!"
-            else         -> "PDF selecionado. Busque uma capa ou converta diretamente."
+            !hasPdf   -> "Selecione um arquivo PDF para começar."
+            hasEpub   -> "EPUB gerado com sucesso!"
+            else      -> "PDF selecionado. Busque uma capa ou converta diretamente."
         }
     }
 
