@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -18,10 +19,8 @@ import java.util.zip.ZipOutputStream
 object EpubBuilder {
 
     private fun esc(s: String) = s
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
+        .replace("&", "&amp;").replace("<", "&lt;")
+        .replace(">", "&gt;").replace("\"", "&quot;")
 
     private fun textToXhtml(text: String): String {
         val paras = text.trim().split(Regex("\n{2,}"))
@@ -30,6 +29,11 @@ object EpubBuilder {
         }.ifBlank { "<p><em>(Página sem texto detectável)</em></p>" }
     }
 
+    /**
+     * Constrói o EPUB e salva em cache temporário.
+     * Chame [saveToDestination] para mover para o destino permanente,
+     * ou [deleteCache] para limpar após envio de e-mail.
+     */
     suspend fun build(
         context: Context,
         title: String,
@@ -37,31 +41,25 @@ object EpubBuilder {
         chapters: List<PdfChapter>,
         coverBytes: ByteArray?,
         onProgress: (Int, Int) -> Unit = { _, _ -> }
-    ): Uri = withContext(Dispatchers.IO) {
+    ): File = withContext(Dispatchers.IO) {
 
-        val uid    = UUID.randomUUID().toString()
-        val date   = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val et     = esc(title)
-        val ea     = esc(author.ifBlank { "Desconhecido" })
+        val uid  = UUID.randomUUID().toString()
+        val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val et   = esc(title)
+        val ea   = esc(author.ifBlank { "Desconhecido" })
 
-        // [H] CORRIGIDO: fname não gera "Título - .epub" quando author é vazio
         val safeTitle  = title.replace(Regex("[^\\w\\s-]"), "").trim().ifBlank { "Livro" }
         val safeAuthor = author.replace(Regex("[^\\w\\s-]"), "").trim()
         val fname = if (safeAuthor.isBlank()) "$safeTitle.epub" else "$safeTitle - $safeAuthor.epub"
 
-        // Build chapter manifests
-        val items  = StringBuilder()
-        val refs   = StringBuilder()
-        val navPts = StringBuilder()
-        val navLi  = StringBuilder()
+        val items = StringBuilder(); val refs = StringBuilder()
+        val navPts = StringBuilder(); val navLi = StringBuilder()
 
         chapters.forEachIndexed { idx, ch ->
-            val cid  = "ch%04d".format(idx + 1)
-            val href = "$cid.xhtml"
-            val et2  = esc(ch.title)
+            val cid = "ch%04d".format(idx + 1); val href = "$cid.xhtml"; val et2 = esc(ch.title)
             items.append("""    <item id="$cid" href="$href" media-type="application/xhtml+xml"/>${""}""").append('\n')
             refs.append("""    <itemref idref="$cid"/>${""}""").append('\n')
-            navPts.append("    <navPoint id=\"$cid\" playOrder=\"${idx + 2}\">\n      <navLabel><text>$et2</text></navLabel>\n      <content src=\"$href\"/>\n    </navPoint>\n")
+            navPts.append("    <navPoint id=\"$cid\" playOrder=\"${idx+2}\">\n      <navLabel><text>$et2</text></navLabel>\n      <content src=\"$href\"/>\n    </navPoint>\n")
             navLi.append("      <li><a href=\"$href\">$et2</a></li>\n")
         }
 
@@ -69,10 +67,8 @@ object EpubBuilder {
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="book-id" version="3.0">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="book-id">$uid</dc:identifier>
-    <dc:title>$et</dc:title>
-    <dc:creator>$ea</dc:creator>
-    <dc:language>pt</dc:language>
-    <dc:date>$date</dc:date>
+    <dc:title>$et</dc:title><dc:creator>$ea</dc:creator>
+    <dc:language>pt</dc:language><dc:date>$date</dc:date>
     ${if (coverBytes != null) "<meta name=\"cover\" content=\"cover-image\"/>" else ""}
   </metadata>
   <manifest>
@@ -119,45 +115,33 @@ p{margin:.55em 0;text-align:justify;text-indent:1.3em;}p:first-of-type{text-inde
 <head><meta charset="UTF-8"/><title>Capa</title><link rel="stylesheet" href="style.css"/></head>
 <body class="cover-page"><div class="cover-wrap"><img src="images/cover.jpg" alt="Capa" class="cover-img"/></div></body></html>"""
 
-        // Write EPUB to temp file
-        val tmp = File(context.cacheDir, "output.epub")
+        // Salva em cache temporário
+        val tmp = File(context.cacheDir, "epub_${System.currentTimeMillis()}.epub")
         ZipOutputStream(FileOutputStream(tmp)).use { zos ->
-            fun addEntry(name: String, bytes: ByteArray) {
-                zos.putNextEntry(ZipEntry(name))
-                zos.write(bytes)
-                zos.closeEntry()
-            }
+            fun addEntry(name: String, bytes: ByteArray) { zos.putNextEntry(ZipEntry(name)); zos.write(bytes); zos.closeEntry() }
             fun addStr(name: String, str: String) = addEntry(name, str.toByteArray(Charsets.UTF_8))
 
-            // mimetype must be first, uncompressed
             val mimeBytes = "application/epub+zip".toByteArray()
             val mt = ZipEntry("mimetype").apply {
-                method = ZipEntry.STORED
-                size = mimeBytes.size.toLong()
+                method = ZipEntry.STORED; size = mimeBytes.size.toLong()
                 compressedSize = mimeBytes.size.toLong()
                 crc = java.util.zip.CRC32().also { it.update(mimeBytes) }.value
             }
-            zos.putNextEntry(mt)
-            zos.write(mimeBytes)
-            zos.closeEntry()
+            zos.putNextEntry(mt); zos.write(mimeBytes); zos.closeEntry()
 
             addStr("META-INF/container.xml", """<?xml version="1.0" encoding="UTF-8"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
 </container>""")
-            addStr("OEBPS/content.opf", opf)
-            addStr("OEBPS/toc.ncx", ncx)
-            addStr("OEBPS/nav.xhtml", nav)
-            addStr("OEBPS/style.css", css)
+            addStr("OEBPS/content.opf", opf); addStr("OEBPS/toc.ncx", ncx)
+            addStr("OEBPS/nav.xhtml", nav); addStr("OEBPS/style.css", css)
             if (coverBytes != null) {
                 addStr("OEBPS/cover.xhtml", coverXhtml)
                 addEntry("OEBPS/images/cover.jpg", coverBytes)
             }
-
             val total = chapters.size
             chapters.forEachIndexed { idx, ch ->
-                val cid = "ch%04d".format(idx + 1)
-                val et2 = esc(ch.title)
+                val cid = "ch%04d".format(idx + 1); val et2 = esc(ch.title)
                 val xhtml = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -169,29 +153,42 @@ ${textToXhtml(ch.text)}
                 withContext(Dispatchers.Main) { onProgress(idx + 1, total) }
             }
         }
-
-        // Save to Downloads
-        val savedUri = saveToDownloads(context, tmp, fname)
-        tmp.delete()
-        savedUri
+        tmp
     }
 
-    private fun saveToDownloads(context: Context, src: File, filename: String): Uri {
+    /** Salva o arquivo de cache para o destino permanente escolhido pelo usuário. */
+    fun saveToDestination(context: Context, cacheFile: File, filename: String): Uri {
+        val treeUriStr = Prefs.get(context, Prefs.SAVE_PATH)
+
+        // Destino customizado via ACTION_OPEN_DOCUMENT_TREE
+        if (treeUriStr.isNotBlank()) {
+            val treeUri = Uri.parse(treeUriStr)
+            val docTree = DocumentFile.fromTreeUri(context, treeUri)
+            if (docTree != null && docTree.canWrite()) {
+                // Remove arquivo anterior com mesmo nome se existir
+                docTree.findFile(filename)?.delete()
+                val newDoc = docTree.createFile("application/epub+zip", filename)
+                    ?: throw Exception("Não foi possível criar arquivo no diretório selecionado.")
+                context.contentResolver.openOutputStream(newDoc.uri)?.use { out ->
+                    cacheFile.inputStream().use { it.copyTo(out) }
+                }
+                return newDoc.uri
+            }
+        }
+
+        // Fallback: Downloads padrão
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val cv = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, filename)
                 put(MediaStore.Downloads.MIME_TYPE, "application/epub+zip")
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
-            val uri = context.contentResolver.insert(
-                MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv
-            ) ?: throw Exception("Falha ao criar arquivo em Downloads")
-
+            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
+                ?: throw Exception("Falha ao criar arquivo em Downloads")
             context.contentResolver.openOutputStream(uri)?.use { out ->
-                src.inputStream().use { it.copyTo(out) }
+                cacheFile.inputStream().use { it.copyTo(out) }
             }
-            cv.clear()
-            cv.put(MediaStore.Downloads.IS_PENDING, 0)
+            cv.clear(); cv.put(MediaStore.Downloads.IS_PENDING, 0)
             context.contentResolver.update(uri, cv, null, null)
             uri
         } else {
@@ -199,8 +196,18 @@ ${textToXhtml(ch.text)}
             val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             dir.mkdirs()
             val dest = File(dir, filename)
-            src.copyTo(dest, overwrite = true)
+            cacheFile.copyTo(dest, overwrite = true)
             Uri.fromFile(dest)
         }
+    }
+
+    fun getSavePathLabel(context: Context): String {
+        val treeUriStr = Prefs.get(context, Prefs.SAVE_PATH)
+        if (treeUriStr.isNotBlank()) {
+            val treeUri = Uri.parse(treeUriStr)
+            val doc = DocumentFile.fromTreeUri(context, treeUri)
+            if (doc != null) return doc.name ?: "Pasta personalizada"
+        }
+        return "Downloads (padrão)"
     }
 }

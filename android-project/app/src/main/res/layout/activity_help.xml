@@ -11,7 +11,7 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- Seção 1: E-mail do Kindle -->
+        <!-- ── Seção 1: E-mail do Kindle ────────────────────────────────── -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -43,15 +43,46 @@
                     android:textColor="@color/on_surface_variant"
                     android:layout_marginBottom="14dp" />
 
-                <WebView
-                    android:id="@+id/webKindleEmail"
+                <!-- GIF com badge de expandir sobreposto -->
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="320dp"
-                    android:background="@android:color/transparent" />
+                    android:layout_height="wrap_content">
+
+                    <WebView
+                        android:id="@+id/webKindleEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="280dp"
+                        android:background="@android:color/transparent" />
+
+                    <!-- Badge expandir — item 1 -->
+                    <FrameLayout
+                        android:id="@+id/btnExpandKindleEmail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="8dp"
+                        android:background="@drawable/expand_badge_bg"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="5dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:elevation="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⛶ Tela cheia"
+                            android:textSize="11sp"
+                            android:textColor="#FFFFFF"
+                            android:fontFamily="sans-serif-medium"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+                </FrameLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Seção 2: Autorizar remetente -->
+        <!-- ── Seção 2: Autorizar remetente ─────────────────────────────── -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -83,11 +114,40 @@
                     android:textColor="@color/on_surface_variant"
                     android:layout_marginBottom="14dp" />
 
-                <WebView
-                    android:id="@+id/webAuthSender"
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="320dp"
-                    android:background="@android:color/transparent" />
+                    android:layout_height="wrap_content">
+
+                    <WebView
+                        android:id="@+id/webAuthSender"
+                        android:layout_width="match_parent"
+                        android:layout_height="280dp"
+                        android:background="@android:color/transparent" />
+
+                    <FrameLayout
+                        android:id="@+id/btnExpandAuthSender"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="8dp"
+                        android:background="@drawable/expand_badge_bg"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="5dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:elevation="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⛶ Tela cheia"
+                            android:textSize="11sp"
+                            android:textColor="#FFFFFF"
+                            android:fontFamily="sans-serif-medium"
+                            android:textStyle="bold" />
+                    </FrameLayout>
+                </FrameLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

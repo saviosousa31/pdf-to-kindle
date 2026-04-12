@@ -12,8 +12,9 @@ object Prefs {
     const val SMTP_HOST  = "smtp_host"
     const val SMTP_PORT  = "smtp_port"
     const val SMTP_TLS   = "smtp_tls"
-    // "system" | "light" | "dark"
     const val DARK_MODE  = "dark_mode"
+    /** URI da árvore de diretório escolhida pelo usuário para salvar EPUBs. Vazio = Downloads padrão. */
+    const val SAVE_PATH  = "save_path_uri"
 
     fun set(ctx: Context, key: String, value: String) =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -39,51 +40,37 @@ object Prefs {
     }
 
     private val PROVIDERS = mapOf(
-        "gmail.com"      to listOf("smtp.gmail.com",      "465", "false", "true"),
-        "googlemail.com" to listOf("smtp.gmail.com",      "465", "false", "true"),
-        "outlook.com"    to listOf("smtp.office365.com",  "587", "true",  "false"),
-        "hotmail.com"    to listOf("smtp.office365.com",  "587", "true",  "false"),
-        "live.com"       to listOf("smtp.office365.com",  "587", "true",  "false"),
-        "yahoo.com"      to listOf("smtp.mail.yahoo.com", "465", "false", "true"),
-        "yahoo.com.br"   to listOf("smtp.mail.yahoo.com", "465", "false", "true"),
-        "icloud.com"     to listOf("smtp.mail.me.com",    "587", "true",  "false"),
-        "me.com"         to listOf("smtp.mail.me.com",    "587", "true",  "false"),
-        "uol.com.br"     to listOf("smtp.uol.com.br",     "587", "true",  "false"),
-        "terra.com.br"   to listOf("smtp.terra.com.br",   "587", "true",  "false"),
-        "protonmail.com" to listOf("smtp.protonmail.ch",  "587", "true",  "false"),
-        "proton.me"      to listOf("smtp.protonmail.ch",  "587", "true",  "false"),
-        "zoho.com"       to listOf("smtp.zoho.com",       "465", "false", "true"),
+        "gmail.com"      to listOf("smtp.gmail.com",      "465","false","true"),
+        "googlemail.com" to listOf("smtp.gmail.com",      "465","false","true"),
+        "outlook.com"    to listOf("smtp.office365.com",  "587","true", "false"),
+        "hotmail.com"    to listOf("smtp.office365.com",  "587","true", "false"),
+        "live.com"       to listOf("smtp.office365.com",  "587","true", "false"),
+        "yahoo.com"      to listOf("smtp.mail.yahoo.com", "465","false","true"),
+        "yahoo.com.br"   to listOf("smtp.mail.yahoo.com", "465","false","true"),
+        "icloud.com"     to listOf("smtp.mail.me.com",    "587","true", "false"),
+        "me.com"         to listOf("smtp.mail.me.com",    "587","true", "false"),
+        "uol.com.br"     to listOf("smtp.uol.com.br",     "587","true", "false"),
+        "terra.com.br"   to listOf("smtp.terra.com.br",   "587","true", "false"),
+        "protonmail.com" to listOf("smtp.protonmail.ch",  "587","true", "false"),
+        "proton.me"      to listOf("smtp.protonmail.ch",  "587","true", "false"),
+        "zoho.com"       to listOf("smtp.zoho.com",       "465","false","true"),
     )
 
-    data class SmtpConfig(
-        val host: String,
-        val port: Int,
-        val useStartTls: Boolean,
-        val useSsl: Boolean
-    )
+    data class SmtpConfig(val host: String, val port: Int, val useStartTls: Boolean, val useSsl: Boolean)
 
     fun resolveSmtp(ctx: Context): SmtpConfig {
         val customHost = get(ctx, SMTP_HOST)
         val customPort = get(ctx, SMTP_PORT)
         val customTls  = get(ctx, SMTP_TLS)
-
         if (customHost.isNotBlank()) {
             val port = customPort.toIntOrNull() ?: 587
-            val tls  = customTls.lowercase() !in listOf("false", "0", "no")
-            return if (port == 465)
-                SmtpConfig(customHost, 465, false, true)
-            else
-                SmtpConfig(customHost, port, tls, false)
+            return if (port == 465) SmtpConfig(customHost, 465, false, true)
+            else SmtpConfig(customHost, port, customTls.lowercase() !in listOf("false","0","no"), false)
         }
-
         val sender = get(ctx, SENDER)
         val domain = if ("@" in sender) sender.substringAfter("@").lowercase() else ""
         val p = PROVIDERS[domain]
-
-        return if (p != null) {
-            SmtpConfig(p[0], p[1].toInt(), p[2] == "true", p[3] == "true")
-        } else {
-            SmtpConfig("smtp.$domain", 465, false, true)
-        }
+        return if (p != null) SmtpConfig(p[0], p[1].toInt(), p[2]=="true", p[3]=="true")
+        else SmtpConfig("smtp.$domain", 465, false, true)
     }
 }
