@@ -17,8 +17,10 @@ import com.bumptech.glide.request.target.Target
 import com.google.android.material.card.MaterialCardView
 
 class CoverAdapter(
+    /** Chamado quando o usuário SELECIONA uma nova capa. */
     private val onSelected: (String) -> Unit,
-    private val onLoadFailed: ((url: String) -> Unit)? = null
+    /** Chamado quando o usuário CLICA NOVAMENTE na capa já selecionada (des-seleciona). */
+    private val onDeselected: (() -> Unit)? = null
 ) : RecyclerView.Adapter<CoverAdapter.VH>() {
 
     private val items = mutableListOf<String>()
@@ -40,7 +42,7 @@ class CoverAdapter(
         notifyItemRangeRemoved(0, size)
     }
 
-    /** Limpa a seleção sem limpar os itens — usado para des-selecionar ao trocar para capa local. */
+    /** Limpa seleção programaticamente sem disparar callbacks. */
     fun clearSelection() {
         val old = selectedUrl ?: return
         selectedUrl = null
@@ -59,38 +61,64 @@ class CoverAdapter(
             itemView.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
             itemView.requestLayout()
 
-            if (selected) { card.strokeWidth = 7; card.strokeColor = COLOR_SELECTED; badge.visibility = View.VISIBLE }
-            else { card.strokeWidth = 0; badge.visibility = View.GONE }
-
-            itemView.alpha  = if (selected) 1f else 0.85f
-            itemView.scaleX = if (selected) 1f else 0.96f
-            itemView.scaleY = if (selected) 1f else 0.96f
+            applySelectedStyle(selected)
 
             Glide.with(image.context).load(url)
-                .apply(RequestOptions().diskCacheStrategy(DiskCacheStrategy.ALL).override(300, 450).centerCrop())
+                .apply(RequestOptions()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .override(300, 450)
+                    .centerCrop())
                 .listener(object : RequestListener<Drawable> {
-                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                    override fun onLoadFailed(e: GlideException?, model: Any?,
+                        target: Target<Drawable>, isFirstResource: Boolean): Boolean {
                         itemView.visibility = View.GONE
-                        itemView.layoutParams = itemView.layoutParams.also { lp -> lp.width = 0 }
+                        itemView.layoutParams = itemView.layoutParams.also { it.width = 0 }
                         itemView.requestLayout()
-                        onLoadFailed?.invoke(url)
                         return true
                     }
-                    override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                        itemView.visibility = View.VISIBLE; return false
+                    override fun onResourceReady(resource: Drawable, model: Any,
+                        target: Target<Drawable>?, dataSource: DataSource,
+                        isFirstResource: Boolean): Boolean {
+                        itemView.visibility = View.VISIBLE
+                        return false
                     }
                 }).into(image)
 
             itemView.setOnClickListener {
                 if (itemView.visibility != View.VISIBLE) return@setOnClickListener
-                val old = selectedUrl
-                selectedUrl = url
-                val newPos = bindingAdapterPosition
-                if (newPos == RecyclerView.NO_ID.toInt()) return@setOnClickListener
-                old?.let { o -> val oldPos = items.indexOf(o); if (oldPos >= 0) notifyItemChanged(oldPos) }
-                notifyItemChanged(newPos)
-                onSelected(url)
+                val pos = bindingAdapterPosition
+                if (pos == RecyclerView.NO_ID.toInt()) return@setOnClickListener
+
+                if (url == selectedUrl) {
+                    // item 6: clicar novamente des-seleciona
+                    selectedUrl = null
+                    notifyItemChanged(pos)
+                    onDeselected?.invoke()
+                } else {
+                    val old = selectedUrl
+                    selectedUrl = url
+                    old?.let { o ->
+                        val oldPos = items.indexOf(o)
+                        if (oldPos >= 0) notifyItemChanged(oldPos)
+                    }
+                    notifyItemChanged(pos)
+                    onSelected(url)
+                }
             }
+        }
+
+        private fun applySelectedStyle(selected: Boolean) {
+            if (selected) {
+                card.strokeWidth = 7
+                card.strokeColor = COLOR_SELECTED
+                badge.visibility = View.VISIBLE
+            } else {
+                card.strokeWidth = 0
+                badge.visibility = View.GONE
+            }
+            itemView.alpha  = if (selected) 1f else 0.85f
+            itemView.scaleX = if (selected) 1f else 0.96f
+            itemView.scaleY = if (selected) 1f else 0.96f
         }
     }
 

@@ -10,29 +10,41 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Properties
+import javax.mail.AuthenticationFailedException
+import javax.mail.Authenticator
+import javax.mail.MessagingException
+import javax.mail.PasswordAuthentication
+import javax.mail.Session
+import javax.mail.Transport
 
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var etSender       : TextInputEditText
-    private lateinit var etPassword     : TextInputEditText
-    private lateinit var etRecipient    : TextInputEditText
-    private lateinit var etSmtpHost     : TextInputEditText
-    private lateinit var etSmtpPort     : TextInputEditText
-    private lateinit var btnSave        : MaterialButton
-    private lateinit var btnHelp        : MaterialButton
-    private lateinit var tvSmtpHint     : TextView
-    private lateinit var headerAvancado : LinearLayout
-    private lateinit var groupAvancado  : LinearLayout
-    private lateinit var tvArrow        : TextView
-    private lateinit var rgDarkMode     : RadioGroup
-    private lateinit var rbSystem       : RadioButton
-    private lateinit var rbLight        : RadioButton
-    private lateinit var rbDark         : RadioButton
-    private lateinit var tvSavePath     : TextView
-    private lateinit var btnChoosePath  : MaterialButton
-    private lateinit var btnResetPath   : MaterialButton
+    private lateinit var etSender         : TextInputEditText
+    private lateinit var etPassword       : TextInputEditText
+    private lateinit var etRecipient      : TextInputEditText
+    private lateinit var etSmtpHost       : TextInputEditText
+    private lateinit var etSmtpPort       : TextInputEditText
+    private lateinit var btnSave          : MaterialButton
+    private lateinit var btnHelp          : MaterialButton
+    private lateinit var btnTestConnection: MaterialButton
+    private lateinit var tvSmtpHint       : TextView
+    private lateinit var headerAvancado   : LinearLayout
+    private lateinit var groupAvancado    : LinearLayout
+    private lateinit var tvArrow          : TextView
+    private lateinit var rgDarkMode       : RadioGroup
+    private lateinit var rbSystem         : RadioButton
+    private lateinit var rbLight          : RadioButton
+    private lateinit var rbDark           : RadioButton
+    private lateinit var tvSavePath       : TextView
+    private lateinit var btnChoosePath    : MaterialButton
+    private lateinit var btnResetPath     : MaterialButton
 
     private var avancadoExpanded = false
     private val REQ_TREE = 200
@@ -43,24 +55,25 @@ class SettingsActivity : AppCompatActivity() {
         supportActionBar?.title = "Configurações"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        etSender       = findViewById(R.id.etSender)
-        etPassword     = findViewById(R.id.etPassword)
-        etRecipient    = findViewById(R.id.etRecipient)
-        etSmtpHost     = findViewById(R.id.etSmtpHost)
-        etSmtpPort     = findViewById(R.id.etSmtpPort)
-        btnSave        = findViewById(R.id.btnSave)
-        btnHelp        = findViewById(R.id.btnHelp)
-        tvSmtpHint     = findViewById(R.id.tvSmtpHint)
-        headerAvancado = findViewById(R.id.headerAvancado)
-        groupAvancado  = findViewById(R.id.groupAvancado)
-        tvArrow        = findViewById(R.id.tvAvancadoArrow)
-        rgDarkMode     = findViewById(R.id.rgDarkMode)
-        rbSystem       = findViewById(R.id.rbSystem)
-        rbLight        = findViewById(R.id.rbLight)
-        rbDark         = findViewById(R.id.rbDark)
-        tvSavePath     = findViewById(R.id.tvSavePath)
-        btnChoosePath  = findViewById(R.id.btnChoosePath)
-        btnResetPath   = findViewById(R.id.btnResetPath)
+        etSender          = findViewById(R.id.etSender)
+        etPassword        = findViewById(R.id.etPassword)
+        etRecipient       = findViewById(R.id.etRecipient)
+        etSmtpHost        = findViewById(R.id.etSmtpHost)
+        etSmtpPort        = findViewById(R.id.etSmtpPort)
+        btnSave           = findViewById(R.id.btnSave)
+        btnHelp           = findViewById(R.id.btnHelp)
+        btnTestConnection = findViewById(R.id.btnTestConnection)
+        tvSmtpHint        = findViewById(R.id.tvSmtpHint)
+        headerAvancado    = findViewById(R.id.headerAvancado)
+        groupAvancado     = findViewById(R.id.groupAvancado)
+        tvArrow           = findViewById(R.id.tvAvancadoArrow)
+        rgDarkMode        = findViewById(R.id.rgDarkMode)
+        rbSystem          = findViewById(R.id.rbSystem)
+        rbLight           = findViewById(R.id.rbLight)
+        rbDark            = findViewById(R.id.rbDark)
+        tvSavePath        = findViewById(R.id.tvSavePath)
+        btnChoosePath     = findViewById(R.id.btnChoosePath)
+        btnResetPath      = findViewById(R.id.btnResetPath)
 
         loadValues()
 
@@ -75,8 +88,9 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         btnChoosePath.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-            intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).also {
+                it.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
             @Suppress("DEPRECATION")
             startActivityForResult(intent, REQ_TREE)
         }
@@ -87,6 +101,9 @@ class SettingsActivity : AppCompatActivity() {
             DialogHelper.success(this, "Pasta restaurada para Downloads.")
         }
 
+        // Item 7: testar conexão
+        btnTestConnection.setOnClickListener { testEmailConnection() }
+
         btnSave.setOnClickListener { saveValues() }
     }
 
@@ -95,7 +112,6 @@ class SettingsActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQ_TREE && resultCode == Activity.RESULT_OK) {
             val uri = data?.data ?: return
-            // Persistir permissão
             contentResolver.takePersistableUriPermission(
                 uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -124,8 +140,8 @@ class SettingsActivity : AppCompatActivity() {
             avancadoExpanded = true; groupAvancado.visibility = View.VISIBLE; tvArrow.text = "▼"
         }
         when (Prefs.get(this, Prefs.DARK_MODE, "system")) {
-            "light" -> rbLight.isChecked = true
-            "dark"  -> rbDark.isChecked  = true
+            "light" -> rbLight.isChecked  = true
+            "dark"  -> rbDark.isChecked   = true
             else    -> rbSystem.isChecked = true
         }
         updateSmtpHint()
@@ -136,9 +152,90 @@ class SettingsActivity : AppCompatActivity() {
         if (sender.contains("@")) {
             Prefs.set(this, Prefs.SENDER, sender)
             val smtp = Prefs.resolveSmtp(this)
-            tvSmtpHint.text = "✅ SMTP detectado: ${smtp.host}:${smtp.port} (${if (smtp.useSsl) "SSL" else "STARTTLS"})\nDeixe os campos SMTP em branco para usar este."
+            tvSmtpHint.text =
+                "✅ SMTP detectado: ${smtp.host}:${smtp.port} " +
+                "(${if (smtp.useSsl) "SSL" else "STARTTLS"})\n" +
+                "Deixe os campos SMTP em branco para usar este."
         } else {
             tvSmtpHint.text = "Preencha o e-mail acima para detectar o SMTP automaticamente."
+        }
+    }
+
+    // ── Item 7: Testar conexão ─────────────────────────────────────────────
+    private fun testEmailConnection() {
+        val sender   = etSender.text.toString().trim()
+        val password = etPassword.text.toString().trim()
+
+        if (sender.isBlank() || !sender.contains("@")) {
+            DialogHelper.warning(this, "Preencha o e-mail remetente antes de testar."); return
+        }
+        if (password.isBlank()) {
+            DialogHelper.warning(this, "Preencha a senha antes de testar."); return
+        }
+
+        // Salva temporariamente para usar resolveSmtp()
+        Prefs.set(this, Prefs.SENDER,    sender)
+        Prefs.set(this, Prefs.SMTP_HOST, etSmtpHost.text.toString().trim())
+        Prefs.set(this, Prefs.SMTP_PORT, etSmtpPort.text.toString().trim())
+        val smtp = Prefs.resolveSmtp(this)
+
+        btnTestConnection.isEnabled = false
+        btnTestConnection.text = "Testando…"
+
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    val props = Properties().apply {
+                        put("mail.smtp.auth",              "true")
+                        put("mail.smtp.host",              smtp.host)
+                        put("mail.smtp.port",              smtp.port.toString())
+                        put("mail.smtp.timeout",           "15000")
+                        put("mail.smtp.connectiontimeout", "15000")
+                        when {
+                            smtp.useSsl    -> {
+                                put("mail.smtp.ssl.enable",             "true")
+                                put("mail.smtp.ssl.protocols",          "TLSv1.2 TLSv1.3")
+                                put("mail.smtp.socketFactory.port",     smtp.port.toString())
+                                put("mail.smtp.socketFactory.class",    "javax.net.ssl.SSLSocketFactory")
+                                put("mail.smtp.socketFactory.fallback", "false")
+                            }
+                            smtp.useStartTls -> {
+                                put("mail.smtp.starttls.enable",   "true")
+                                put("mail.smtp.starttls.required", "true")
+                                put("mail.smtp.ssl.protocols",     "TLSv1.2 TLSv1.3")
+                            }
+                            else -> put("mail.smtp.ssl.enable", "true")
+                        }
+                    }
+                    val session = Session.getInstance(props, object : Authenticator() {
+                        override fun getPasswordAuthentication() =
+                            PasswordAuthentication(sender, password)
+                    })
+                    // connect() verifica autenticação sem enviar nenhum e-mail
+                    val transport = session.getTransport("smtp")
+                    transport.connect(smtp.host, smtp.port, sender, password)
+                    transport.close()
+                    Pair(true, "")
+                } catch (e: AuthenticationFailedException) {
+                    Pair(false, "Falha de autenticação.\n• Gmail: use uma Senha de App (veja Ajuda)\n• Outlook: habilite SMTP nas configurações da conta\n\nDetalhe: ${e.message}")
+                } catch (e: MessagingException) {
+                    Pair(false, "Não foi possível conectar.\nVerifique host, porta e conexão com a internet.\n\nDetalhe: ${e.message}")
+                } catch (e: Exception) {
+                    Pair(false, "Erro inesperado: ${e.message}")
+                }
+            }
+
+            btnTestConnection.isEnabled = true
+            btnTestConnection.text = "Testar Conexão de E-mail"
+
+            if (result.first) {
+                DialogHelper.success(this@SettingsActivity,
+                    "✅  Conexão bem-sucedida!\n\nSMTP: ${smtp.host}:${smtp.port}\n" +
+                    "Modo: ${if (smtp.useSsl) "SSL" else "STARTTLS"}\n\n" +
+                    "Suas configurações estão corretas.")
+            } else {
+                DialogHelper.error(this@SettingsActivity, result.second)
+            }
         }
     }
 
@@ -146,8 +243,8 @@ class SettingsActivity : AppCompatActivity() {
         val sender    = etSender.text.toString().trim()
         val password  = etPassword.text.toString().trim()
         val recipient = etRecipient.text.toString().trim()
-        if (sender.isBlank() || !sender.contains("@")) { etSender.error = "E-mail inválido"; return }
-        if (password.isBlank()) { etPassword.error = "Informe a senha"; return }
+        if (sender.isBlank()    || !sender.contains("@"))    { etSender.error    = "E-mail inválido"; return }
+        if (password.isBlank())                               { etPassword.error  = "Informe a senha"; return }
         if (recipient.isBlank() || !recipient.contains("@")) { etRecipient.error = "E-mail de destino inválido"; return }
         Prefs.set(this, Prefs.SENDER,    sender)
         Prefs.set(this, Prefs.PASSWORD,  password)

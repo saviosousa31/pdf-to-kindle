@@ -41,17 +41,16 @@
                     android:textColor="#FFFFFF"
                     android:letterSpacing="0.02" />
 
-                <com.google.android.material.button.MaterialButton
+                <!-- Fix item 2: botão de engrenagem com ícone centralizado -->
+                <ImageButton
                     android:id="@+id/btnSettings"
-                    style="@style/Widget.Material3.Button.IconButton"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
-                    app:icon="@drawable/ic_settings_gear"
-                    app:iconSize="22dp"
-                    app:iconTint="#FFFFFF"
+                    android:src="@drawable/ic_settings_gear"
+                    android:background="@drawable/btn_settings_bg"
                     android:contentDescription="Configurações"
-                    app:strokeColor="#FFFFFF"
-                    app:strokeWidth="1dp" />
+                    android:padding="10dp"
+                    android:scaleType="fitCenter" />
             </LinearLayout>
 
             <TextView
@@ -71,7 +70,7 @@
             android:paddingHorizontal="16dp"
             android:paddingTop="16dp">
 
-            <!-- Status -->
+            <!-- Status chip -->
             <TextView
                 android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
@@ -96,51 +95,35 @@
                 app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp"
                 app:cardBackgroundColor="@color/surface">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="18dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
                         android:layout_marginBottom="10dp">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Arquivo PDF"
-                            android:textSize="16sp"
-                            android:fontFamily="sans-serif-medium"
-                            android:textStyle="bold"
-                            android:textColor="@color/on_surface" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📄" android:textSize="20sp" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="Arquivo PDF"
+                            android:textSize="16sp" android:fontFamily="sans-serif-medium"
+                            android:textStyle="bold" android:textColor="@color/on_surface" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="📄" android:textSize="20sp" />
                     </LinearLayout>
-
                     <TextView
                         android:id="@+id/tvPdfName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Nenhum arquivo selecionado"
-                        android:textSize="13sp"
-                        android:fontFamily="sans-serif"
+                        android:textSize="13sp" android:fontFamily="sans-serif"
                         android:textColor="@color/on_surface_variant"
-                        android:ellipsize="middle"
-                        android:singleLine="true"
+                        android:ellipsize="middle" android:singleLine="true"
                         android:layout_marginBottom="14dp" />
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSelect"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="Selecionar PDF"
-                        android:textSize="15sp"
-                        android:fontFamily="sans-serif-medium"
-                        app:cornerRadius="12dp" />
+                        android:layout_width="match_parent" android:layout_height="52dp"
+                        android:text="Selecionar PDF" android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" app:cornerRadius="12dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -156,146 +139,85 @@
                 app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp"
                 app:cardBackgroundColor="@color/surface">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="18dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
                         android:layout_marginBottom="12dp">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Capa do Livro"
-                            android:textSize="16sp"
-                            android:fontFamily="sans-serif-medium"
-                            android:textStyle="bold"
-                            android:textColor="@color/on_surface" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🖼" android:textSize="20sp" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="Capa do Livro"
+                            android:textSize="16sp" android:fontFamily="sans-serif-medium"
+                            android:textStyle="bold" android:textColor="@color/on_surface" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🖼" android:textSize="20sp" />
                     </LinearLayout>
 
-                    <!-- Buscar + Converter sem capa -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSearchCover"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="Buscar Capa"
-                        android:textSize="15sp"
+                        android:layout_width="match_parent" android:layout_height="52dp"
+                        android:text="Buscar Capa" android:textSize="15sp"
                         android:fontFamily="sans-serif-medium"
                         style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:cornerRadius="12dp"
-                        android:layout_marginBottom="8dp" />
+                        app:cornerRadius="12dp" android:layout_marginBottom="8dp" />
 
-                    <!-- Item 4: Selecionar da galeria -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSelectLocalCover"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:text="🖼  Usar Foto do Celular"
-                        android:textSize="14sp"
+                        android:layout_width="match_parent" android:layout_height="48dp"
+                        android:text="🖼  Usar Foto do Celular" android:textSize="14sp"
                         android:fontFamily="sans-serif"
                         style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:cornerRadius="12dp"
-                        android:layout_marginBottom="8dp" />
+                        app:cornerRadius="12dp" android:layout_marginBottom="4dp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnConvertNoCover"
-                        android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:text="⚡  Converter sem Capa"
-                        android:textSize="14sp"
-                        android:fontFamily="sans-serif"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        app:cornerRadius="12dp" />
-
-                    <!-- Item 4: Prévia da capa local (GONE até o usuário selecionar) -->
+                    <!-- Prévia capa local -->
                     <LinearLayout
                         android:id="@+id/layoutLocalCover"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:visibility="gone"
-                        android:layout_marginTop="12dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:text="Capa selecionada do celular:"
-                            android:textSize="13sp"
-                            android:fontFamily="sans-serif"
+                            android:textSize="13sp" android:fontFamily="sans-serif"
                             android:textColor="@color/on_surface_variant"
                             android:layout_marginBottom="8dp" />
-
-                        <!-- Preview container (igual ao item do carrossel mas fixo) -->
-                        <FrameLayout
-                            android:layout_width="140dp"
-                            android:layout_height="210dp"
-                            android:layout_marginHorizontal="0dp">
-
+                        <FrameLayout android:layout_width="140dp" android:layout_height="210dp">
                             <com.google.android.material.card.MaterialCardView
                                 android:id="@+id/cardLocalCoverPreview"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                app:cardCornerRadius="8dp"
-                                app:cardElevation="3dp"
-                                app:strokeWidth="7dp"
-                                app:strokeColor="@color/selected_green">
-
-                                <ImageView
-                                    android:id="@+id/imgLocalCover"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
+                                android:layout_width="match_parent" android:layout_height="match_parent"
+                                app:cardCornerRadius="8dp" app:cardElevation="3dp"
+                                app:strokeWidth="7dp" app:strokeColor="@color/selected_green">
+                                <ImageView android:id="@+id/imgLocalCover"
+                                    android:layout_width="match_parent" android:layout_height="match_parent"
                                     android:scaleType="centerCrop"
                                     android:contentDescription="Capa do celular" />
                             </com.google.android.material.card.MaterialCardView>
-
-                            <!-- Badge check canto superior direito -->
-                            <FrameLayout
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
-                                android:layout_gravity="top|end"
-                                android:layout_margin="5dp"
-                                android:background="@drawable/check_badge_bg"
-                                android:elevation="4dp">
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:text="✓"
-                                    android:textSize="13sp"
-                                    android:textColor="#FFFFFF"
-                                    android:textStyle="bold" />
+                            <FrameLayout android:layout_width="26dp" android:layout_height="26dp"
+                                android:layout_gravity="top|end" android:layout_margin="5dp"
+                                android:background="@drawable/check_badge_bg" android:elevation="4dp">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                    android:layout_gravity="center" android:text="✓"
+                                    android:textSize="13sp" android:textColor="#FFFFFF" android:textStyle="bold" />
                             </FrameLayout>
                         </FrameLayout>
-
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRemoveLocalCover"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:text="Remover"
-                            android:textSize="12sp"
+                            android:layout_width="wrap_content" android:layout_height="36dp"
+                            android:text="Remover" android:textSize="12sp"
                             style="@style/Widget.Material3.Button.TextButton"
-                            app:iconSize="14dp"
                             android:layout_marginTop="4dp" />
                     </LinearLayout>
 
-                    <!-- Hint + carrossel (GONE até buscar) -->
-                    <TextView
-                        android:id="@+id/tvCoverHint"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:fontFamily="sans-serif"
+                    <!-- Hint + carrossel -->
+                    <TextView android:id="@+id/tvCoverHint"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:textSize="13sp" android:fontFamily="sans-serif"
                         android:textColor="@color/on_surface_variant"
-                        android:visibility="gone"
-                        android:paddingTop="8dp"
+                        android:visibility="gone" android:paddingTop="8dp"
                         android:layout_marginBottom="4dp" />
 
                     <androidx.recyclerview.widget.RecyclerView
@@ -308,10 +230,8 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnLoadMore"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Carregar mais capas"
-                        android:textSize="13sp"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Carregar mais capas" android:textSize="13sp"
                         android:fontFamily="sans-serif"
                         style="@style/Widget.Material3.Button.TextButton"
                         android:visibility="gone"
@@ -320,7 +240,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ─── Card: Conversão ────────────────────────────────────── -->
+            <!-- ─── Card: Conversão (sempre visível quando PDF selecionado — item 5) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardConvert"
                 android:layout_width="match_parent"
@@ -332,58 +252,38 @@
                 app:strokeColor="@color/card_stroke"
                 app:strokeWidth="1dp"
                 app:cardBackgroundColor="@color/surface">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="18dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Conversão"
-                        android:textSize="16sp"
-                        android:fontFamily="sans-serif-medium"
-                        android:textStyle="bold"
-                        android:textColor="@color/on_surface"
-                        android:layout_marginBottom="14dp" />
-
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Conversão" android:textSize="16sp"
+                        android:fontFamily="sans-serif-medium" android:textStyle="bold"
+                        android:textColor="@color/on_surface" android:layout_marginBottom="14dp" />
+                    <!-- item 5: texto muda dinamicamente por código -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnConvert"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="Converter para EPUB"
-                        android:textSize="17sp"
-                        android:fontFamily="sans-serif-medium"
+                        android:layout_width="match_parent" android:layout_height="56dp"
+                        android:text="Converter para EPUB (Sem capa)"
+                        android:textSize="16sp" android:fontFamily="sans-serif-medium"
                         android:textStyle="bold"
-                        android:enabled="false"
-                        app:cornerRadius="14dp"
-                        android:layout_marginBottom="12dp" />
-
+                        app:cornerRadius="14dp" android:layout_marginBottom="12dp" />
                     <com.google.android.material.progressindicator.LinearProgressIndicator
                         android:id="@+id/progressConvert"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:visibility="gone"
-                        android:layout_marginBottom="6dp"
-                        app:indicatorColor="@color/primary"
-                        app:trackColor="@color/surface_variant"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:visibility="gone" android:layout_marginBottom="6dp"
+                        app:indicatorColor="@color/primary" app:trackColor="@color/surface_variant"
                         app:trackCornerRadius="4dp" />
-
-                    <TextView
-                        android:id="@+id/tvProgress"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:fontFamily="sans-serif"
+                    <TextView android:id="@+id/tvProgress"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:textSize="13sp" android:fontFamily="sans-serif"
                         android:textColor="@color/on_surface_variant"
-                        android:visibility="gone"
-                        android:gravity="center" />
+                        android:visibility="gone" android:gravity="center" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ─── Card: Resultado ───────────────────────────────────── -->
+            <!-- ─── Card: Resultado ────────────────────────────────────── -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardResult"
                 android:layout_width="match_parent"
@@ -395,53 +295,34 @@
                 app:strokeColor="@color/selected_green"
                 app:strokeWidth="2dp"
                 app:cardBackgroundColor="@color/success_surface">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="18dp">
-
-                    <TextView
-                        android:id="@+id/tvResult"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/success"
-                        android:lineSpacingMultiplier="1.3"
+                    <TextView android:id="@+id/tvResult"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:textSize="14sp" android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/success" android:lineSpacingMultiplier="1.3"
                         android:layout_marginBottom="16dp" />
-
-                    <!-- Item 2: Botão Baixar EPUB -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDownload"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="⬇  Baixar EPUB"
-                        android:textSize="15sp"
-                        android:fontFamily="sans-serif-medium"
-                        app:cornerRadius="12dp"
+                        android:layout_width="match_parent" android:layout_height="52dp"
+                        android:text="⬇  Baixar EPUB" android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" app:cornerRadius="12dp"
                         android:layout_marginBottom="10dp" />
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnEmail"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="Enviar por E-mail"
-                        android:textSize="15sp"
+                        android:layout_width="match_parent" android:layout_height="52dp"
+                        android:text="Enviar por E-mail" android:textSize="15sp"
                         android:fontFamily="sans-serif-medium"
                         style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:cornerRadius="12dp"
-                        android:layout_marginBottom="10dp" />
-
+                        app:cornerRadius="12dp" android:layout_marginBottom="10dp" />
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnNew"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="Converter Novo Arquivo"
-                        android:textSize="15sp"
-                        android:fontFamily="sans-serif-medium"
-                        app:cornerRadius="12dp" />
+                        android:layout_width="match_parent" android:layout_height="52dp"
+                        android:text="Converter Novo Arquivo" android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" app:cornerRadius="12dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
