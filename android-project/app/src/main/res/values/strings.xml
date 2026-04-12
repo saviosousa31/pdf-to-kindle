@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PDF para EPUB</string>
+    <string name="app_name">EPUB Maker: PDF converter</string>
+    <string name="help_kindle_email_title">Como encontrar seu e-mail do Kindle</string>
+    <string name="help_kindle_email_desc">No app da Amazon, acesse sua conta e vá em "Gerenciar meu Conteúdo e Dispositivos" → selecione seu Kindle → o e-mail aparecerá como "Enviar para Kindle". Use esse endereço no campo de destinatário.</string>
+    <string name="help_authorize_sender_title">Como autorizar o remetente no Kindle</string>
+    <string name="help_authorize_sender_desc">No app da Amazon, acesse "Gerenciar meu Conteúdo e Dispositivos" → aba "Preferências" → "Configurações do Enviar para Kindle" → adicione o e-mail remetente em "E-mails pessoais autorizados". Sem isso o Kindle rejeitará os documentos.</string>
 </resources>

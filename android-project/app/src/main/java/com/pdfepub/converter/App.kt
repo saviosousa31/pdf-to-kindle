@@ -7,5 +7,6 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         PDFBoxResourceLoader.init(applicationContext)
+        Prefs.applyDarkMode(this)
     }
 }

@@ -27,11 +27,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Tema próprio com ActionBar para suportar supportActionBar -->
         <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.PdfEpub.Settings"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".HelpActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PdfEpub.Help"
             android:windowSoftInputMode="adjustResize" />
 
     </application>

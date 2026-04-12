@@ -1,12 +1,14 @@
 package com.pdfepub.converter
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 
 class SettingsActivity : AppCompatActivity() {
@@ -17,10 +19,15 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var etSmtpHost     : TextInputEditText
     private lateinit var etSmtpPort     : TextInputEditText
     private lateinit var btnSave        : MaterialButton
+    private lateinit var btnHelp        : MaterialButton
     private lateinit var tvSmtpHint     : TextView
     private lateinit var headerAvancado : LinearLayout
     private lateinit var groupAvancado  : LinearLayout
     private lateinit var tvArrow        : TextView
+    private lateinit var rgDarkMode     : RadioGroup
+    private lateinit var rbSystem       : RadioButton
+    private lateinit var rbLight        : RadioButton
+    private lateinit var rbDark         : RadioButton
 
     private var avancadoExpanded = false
 
@@ -36,10 +43,15 @@ class SettingsActivity : AppCompatActivity() {
         etSmtpHost     = findViewById(R.id.etSmtpHost)
         etSmtpPort     = findViewById(R.id.etSmtpPort)
         btnSave        = findViewById(R.id.btnSave)
+        btnHelp        = findViewById(R.id.btnHelp)
         tvSmtpHint     = findViewById(R.id.tvSmtpHint)
         headerAvancado = findViewById(R.id.headerAvancado)
         groupAvancado  = findViewById(R.id.groupAvancado)
         tvArrow        = findViewById(R.id.tvAvancadoArrow)
+        rgDarkMode     = findViewById(R.id.rgDarkMode)
+        rbSystem       = findViewById(R.id.rbSystem)
+        rbLight        = findViewById(R.id.rbLight)
+        rbDark         = findViewById(R.id.rbDark)
 
         loadValues()
 
@@ -47,8 +59,21 @@ class SettingsActivity : AppCompatActivity() {
             if (!hasFocus) updateSmtpHint()
         }
 
-        // Expansão/colapso da seção Avançado
         headerAvancado.setOnClickListener { toggleAvancado() }
+
+        btnHelp.setOnClickListener {
+            startActivity(Intent(this, HelpActivity::class.java))
+        }
+
+        rgDarkMode.setOnCheckedChangeListener { _, checkedId ->
+            val mode = when (checkedId) {
+                R.id.rbLight  -> "light"
+                R.id.rbDark   -> "dark"
+                else          -> "system"
+            }
+            Prefs.set(this, Prefs.DARK_MODE, mode)
+            Prefs.applyDarkMode(this)
+        }
 
         btnSave.setOnClickListener { saveValues() }
     }
@@ -66,11 +91,17 @@ class SettingsActivity : AppCompatActivity() {
         etSmtpHost.setText(Prefs.get(this, Prefs.SMTP_HOST))
         etSmtpPort.setText(Prefs.get(this, Prefs.SMTP_PORT))
 
-        // Se já há host personalizado salvo, expandir a seção automaticamente
         if (Prefs.get(this, Prefs.SMTP_HOST).isNotBlank()) {
             avancadoExpanded = true
             groupAvancado.visibility = View.VISIBLE
             tvArrow.text = "▼"
+        }
+
+        // Dark mode radio
+        when (Prefs.get(this, Prefs.DARK_MODE, "system")) {
+            "light"  -> rbLight.isChecked = true
+            "dark"   -> rbDark.isChecked  = true
+            else     -> rbSystem.isChecked = true
         }
 
         updateSmtpHint()
@@ -84,7 +115,7 @@ class SettingsActivity : AppCompatActivity() {
             tvSmtpHint.text =
                 "✅ SMTP detectado: ${smtp.host}:${smtp.port} " +
                 "(${if (smtp.useSsl) "SSL" else "STARTTLS"})\n" +
-                "Deixe os campos de Avançado em branco para usar este."
+                "Deixe os campos SMTP em branco para usar este."
         } else {
             tvSmtpHint.text = "Preencha o e-mail acima para detectar o SMTP automaticamente."
         }
@@ -114,11 +145,9 @@ class SettingsActivity : AppCompatActivity() {
         Prefs.set(this, Prefs.SMTP_PORT, smtpPort)
 
         updateSmtpHint()
-        Snackbar.make(
-            findViewById(android.R.id.content),
-            "✓ Configurações salvas!",
-            Snackbar.LENGTH_SHORT
-        ).show()
+
+        // Item 2: popup de sucesso
+        DialogHelper.success(this, "Configurações salvas com sucesso!")
     }
 
     override fun onSupportNavigateUp(): Boolean {

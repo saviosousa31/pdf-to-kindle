@@ -1,15 +1,19 @@
 package com.pdfepub.converter
 
-import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.Target
 import com.google.android.material.card.MaterialCardView
 
 class CoverAdapter(
@@ -20,7 +24,7 @@ class CoverAdapter(
     var selectedUrl: String? = null
         private set
 
-    private val COLOR_SELECTED = Color.parseColor("#2E7D32")  // success green
+    private val COLOR_SELECTED = Color.parseColor("#1B8A3E")
 
     fun addItems(urls: List<String>) {
         val start = items.size
@@ -43,9 +47,8 @@ class CoverAdapter(
         fun bind(url: String) {
             val selected = (url == selectedUrl)
 
-            // Borda verde + badge de check quando selecionado
             if (selected) {
-                card.strokeWidth = 6
+                card.strokeWidth = 7
                 card.strokeColor = COLOR_SELECTED
                 badge.visibility = View.VISIBLE
             } else {
@@ -53,23 +56,39 @@ class CoverAdapter(
                 badge.visibility = View.GONE
             }
 
-            itemView.alpha  = if (selected) 1f else 0.80f
-            itemView.scaleX = if (selected) 1f else 0.95f
-            itemView.scaleY = if (selected) 1f else 0.95f
+            itemView.alpha  = if (selected) 1f else 0.85f
+            itemView.scaleX = if (selected) 1f else 0.96f
+            itemView.scaleY = if (selected) 1f else 0.96f
 
+            // Item 6: listener que oculta o item se a imagem falhar (404, sem conteúdo, etc.)
             Glide.with(image.context)
                 .load(url)
                 .apply(
                     RequestOptions()
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .placeholder(R.drawable.ic_book_placeholder)
-                        .error(R.drawable.ic_book_placeholder)
                         .override(300, 450)
                         .centerCrop()
                 )
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean
+                    ): Boolean {
+                        // Oculta o item inteiro quando a imagem não carrega
+                        itemView.visibility = View.GONE
+                        return true
+                    }
+                    override fun onResourceReady(
+                        resource: Drawable, model: Any, target: Target<Drawable>?,
+                        dataSource: DataSource, isFirstResource: Boolean
+                    ): Boolean {
+                        itemView.visibility = View.VISIBLE
+                        return false
+                    }
+                })
                 .into(image)
 
             itemView.setOnClickListener {
+                if (itemView.visibility != View.VISIBLE) return@setOnClickListener
                 val old = selectedUrl
                 selectedUrl = url
                 val newPos = bindingAdapterPosition

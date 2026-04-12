@@ -12,179 +12,317 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Configurações de E-mail"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@color/primary"
-            android:layout_marginBottom="6dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="O SMTP é detectado automaticamente pelo seu domínio de e-mail."
-            android:textSize="13sp"
-            android:textColor="@color/on_surface_variant"
-            android:layout_marginBottom="24dp" />
-
-        <!-- E-mail remetente -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:hint="E-mail remetente (quem envia)"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSender"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textEmailAddress"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Senha -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
-            android:hint="Senha (ou Senha de App para Gmail)"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            app:endIconMode="password_toggle">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPassword"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textPassword"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="💡 Gmail: acesse myaccount.google.com/apppasswords para criar uma Senha de App"
-            android:textSize="12sp"
-            android:textColor="@color/on_surface_variant"
-            android:layout_marginBottom="16dp" />
-
-        <!-- E-mail destinatário -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:hint="E-mail destinatário (quem recebe)"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etRecipient"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textEmailAddress"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- SMTP hint automático -->
-        <TextView
-            android:id="@+id/tvSmtpHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Preencha o e-mail acima para detectar o SMTP automaticamente."
-            android:textSize="13sp"
-            android:textColor="@color/primary"
-            android:background="@color/surface_variant"
-            android:padding="12dp"
-            android:layout_marginBottom="20dp" />
-
-        <!-- ══ Seção Avançado (expansível — Item 1) ══════════════════════════ -->
-        <!-- Cabeçalho clicável -->
+        <!-- Header -->
         <LinearLayout
-            android:id="@+id/headerAvancado"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="@color/surface_variant"
-            android:paddingHorizontal="12dp"
-            android:layout_marginBottom="0dp"
-            android:clickable="true"
-            android:focusable="true">
+            android:layout_marginBottom="4dp">
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="⚙ Avançado  (SMTP manual)"
-                android:textSize="14sp"
+                android:text="Configurações"
+                android:textSize="22sp"
+                android:fontFamily="sans-serif-medium"
                 android:textStyle="bold"
                 android:textColor="@color/primary" />
 
-            <TextView
-                android:id="@+id/tvAvancadoArrow"
+            <!-- Item 1: botão de ajuda -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHelp"
+                style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="▶"
-                android:textSize="14sp"
-                android:textColor="@color/primary" />
+                android:layout_height="40dp"
+                android:text="Ajuda"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-medium"
+                app:icon="@android:drawable/ic_menu_help"
+                app:iconSize="18dp"
+                app:cornerRadius="20dp" />
         </LinearLayout>
 
-        <!-- Conteúdo expansível -->
-        <LinearLayout
-            android:id="@+id/groupAvancado"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:background="@color/surface"
-            android:paddingTop="12dp"
-            android:paddingHorizontal="4dp"
-            android:layout_marginBottom="16dp">
+            android:text="Configure o envio de e-mail para o seu Kindle."
+            android:textSize="13sp"
+            android:fontFamily="sans-serif"
+            android:textColor="@color/on_surface_variant"
+            android:layout_marginBottom="20dp" />
 
-            <TextView
+        <!-- ══ Modo escuro ═══════════════════════════════════════════════════ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_stroke"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/surface">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Deixe em branco para usar a detecção automática pelo domínio."
-                android:textSize="12sp"
-                android:textColor="@color/on_surface_variant"
-                android:layout_marginBottom="12dp" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Servidor SMTP  (ex: smtp.gmail.com)"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSmtpHost"
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:singleLine="true" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:text="🌙  Aparência"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textStyle="bold"
+                    android:textColor="@color/on_surface"
+                    android:layout_marginBottom="12dp" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Porta SMTP  (465 = SSL  |  587 = STARTTLS)"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSmtpPort"
+                <RadioGroup
+                    android:id="@+id/rgDarkMode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:singleLine="true" />
-            </com.google.android.material.textfield.TextInputLayout>
-        </LinearLayout>
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/rbSystem"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Sistema"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif" />
+
+                    <RadioButton
+                        android:id="@+id/rbLight"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="☀ Claro"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif" />
+
+                    <RadioButton
+                        android:id="@+id/rbDark"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🌙 Escuro"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif" />
+                </RadioGroup>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ══ E-mail ════════════════════════════════════════════════════════ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_stroke"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📧  Conta de E-mail"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textStyle="bold"
+                    android:textColor="@color/on_surface"
+                    android:layout_marginBottom="14dp" />
+
+                <!-- Remetente -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:hint="E-mail remetente (quem envia)"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etSender"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textEmailAddress"
+                        android:singleLine="true"
+                        android:fontFamily="sans-serif" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Senha -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:hint="Senha / Senha de App"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    app:endIconMode="password_toggle">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:singleLine="true"
+                        android:fontFamily="sans-serif" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="💡 Gmail requer Senha de App: myaccount.google.com/apppasswords"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif"
+                    android:textColor="@color/on_surface_variant"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Destinatário -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:hint="E-mail do Kindle (destinatário)"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etRecipient"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textEmailAddress"
+                        android:singleLine="true"
+                        android:fontFamily="sans-serif" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- SMTP hint automático -->
+                <TextView
+                    android:id="@+id/tvSmtpHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Preencha o e-mail remetente para detectar o SMTP automaticamente."
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif"
+                    android:textColor="@color/primary"
+                    android:background="@color/surface_variant"
+                    android:padding="10dp"
+                    android:layout_marginBottom="0dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ══ Avançado (expansível) ══════════════════════════════════════════ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/card_stroke"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Cabeçalho clicável -->
+                <LinearLayout
+                    android:id="@+id/headerAvancado"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="⚙  SMTP Manual (opcional)"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary" />
+
+                    <TextView
+                        android:id="@+id/tvAvancadoArrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="▶"
+                        android:textSize="14sp"
+                        android:textColor="@color/primary" />
+                </LinearLayout>
+
+                <!-- Conteúdo expansível -->
+                <LinearLayout
+                    android:id="@+id/groupAvancado"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:paddingHorizontal="16dp"
+                    android:paddingBottom="14dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Deixe em branco para usar a detecção automática pelo domínio."
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:textColor="@color/on_surface_variant"
+                        android:layout_marginBottom="10dp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:hint="Servidor SMTP  (ex: smtp.gmail.com)"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSmtpHost"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:singleLine="true"
+                            android:fontFamily="sans-serif" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Porta SMTP  (465 = SSL  |  587 = STARTTLS)"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSmtpPort"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:singleLine="true"
+                            android:fontFamily="sans-serif" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Salvar -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="54dp"
             android:text="Salvar Configurações"
             android:textSize="16sp"
+            android:fontFamily="sans-serif-medium"
             android:textStyle="bold"
-            android:layout_marginTop="8dp"
-            app:cornerRadius="8dp" />
+            app:cornerRadius="14dp" />
 
     </LinearLayout>
 </ScrollView>

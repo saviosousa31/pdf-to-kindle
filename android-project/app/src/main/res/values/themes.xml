@@ -1,24 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Tema principal: NoActionBar para MainActivity -->
-    <style name="Theme.PdfEpub" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Theme.PdfEpub" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorSecondary">@color/secondary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="android:statusBarColor">@color/primary</item>
         <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:fontFamily">sans-serif</item>
     </style>
 
-    <!-- Tema com ActionBar para SettingsActivity (suporta supportActionBar) -->
-    <style name="Theme.PdfEpub.Settings" parent="Theme.Material3.Light">
+    <style name="Theme.PdfEpub.Settings" parent="Theme.Material3.DayNight">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorSecondary">@color/secondary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="android:statusBarColor">@color/primary</item>
         <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <style name="Theme.PdfEpub.Help" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <!-- Estilos de texto reutilizáveis -->
+    <style name="TextAppearance.App.Headline" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <style name="TextAppearance.App.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <!-- Dialog arredondado padrão -->
+    <style name="Dialog.Rounded" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.App.MediumComponent</item>
+    </style>
+
+    <style name="ShapeAppearance.App.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerSize">16dp</item>
     </style>
 
 </resources>
