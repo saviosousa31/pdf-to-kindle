@@ -375,7 +375,7 @@ class MainActivity : AppCompatActivity() {
             val result = EmailSender.send(this@MainActivity, Uri.fromFile(f), epubFilename)
             if (result.success) {
                 deleteCacheFile()
-                DialogHelper.success(this@MainActivity, "✅  EPUB enviado com sucesso!\nO arquivo temporário foi removido.")
+                DialogHelper.success(this@MainActivity, "✅  EPUB enviado com sucesso!")
             } else {
                 DialogHelper.error(this@MainActivity, result.error)
                 btnEmail.isEnabled = true
