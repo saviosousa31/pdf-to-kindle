@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private var conversionJob     : Job?       = null
 
     // ── Views ────────────────────────────────────────────────────────────────
+    private lateinit var mainScrollView   : ScrollView
     private lateinit var tvStatus         : TextView
     private lateinit var cardPdf          : MaterialCardView
     private lateinit var tvPdfName        : TextView
@@ -70,6 +71,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindViews() {
+        mainScrollView    = findViewById(R.id.mainScrollView)
         tvStatus          = findViewById(R.id.tvStatus)
         cardPdf           = findViewById(R.id.cardPdf)
         tvPdfName         = findViewById(R.id.tvPdfName)
@@ -92,12 +94,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupCoverRecycler() {
-        coverAdapter = CoverAdapter { url ->
-            selectedCoverUrl = url
-            cardConvert.visibility = View.VISIBLE
-            cardResult.visibility  = View.GONE
-            btnConvert.isEnabled   = true
-        }
+        coverAdapter = CoverAdapter(
+            onSelected = { url ->
+                selectedCoverUrl = url
+                cardConvert.visibility = View.VISIBLE
+                cardResult.visibility  = View.GONE
+                btnConvert.isEnabled   = true
+                // Fix 2: scroll automático até o card de conversão ao selecionar capa
+                cardConvert.post {
+                    mainScrollView.smoothScrollTo(0, cardConvert.bottom)
+                }
+            },
+            onLoadFailed = { /* url que falhou — o adapter já oculta o item */ }
+        )
         rvCovers.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         rvCovers.adapter = coverAdapter
@@ -153,7 +162,6 @@ class MainActivity : AppCompatActivity() {
 
                 coverAdapter.clear()
                 tvCoverHint.visibility     = View.GONE
-                // Item 5: esconde o RV até ter resultados
                 rvCovers.visibility        = View.GONE
                 btnLoadMore.visibility     = View.GONE
                 btnSearchCover.text        = "Buscar Capa"
@@ -190,8 +198,8 @@ class MainActivity : AppCompatActivity() {
         selectedCoverUrl   = null
         selectedCoverBytes = null
         btnConvert.isEnabled = false
-        // Oculta o RV durante nova busca
-        rvCovers.visibility = View.GONE
+        rvCovers.visibility  = View.GONE
+        btnLoadMore.visibility = View.GONE
 
         btnSearchCover.isEnabled = false
         btnSearchCover.text      = "Buscando..."
@@ -206,9 +214,9 @@ class MainActivity : AppCompatActivity() {
             if (urls.isEmpty()) {
                 tvCoverHint.text    = "Nenhuma capa encontrada. Tente verificar o nome do arquivo."
                 rvCovers.visibility = View.GONE
+                btnLoadMore.visibility = View.GONE
             } else {
                 tvCoverHint.text    = "${urls.size} capa(s) encontrada(s). Toque na desejada."
-                // Exibe o RV somente quando há resultados
                 rvCovers.visibility = View.VISIBLE
                 showMoreCovers()
             }
@@ -218,12 +226,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Fix 4: ao carregar mais, só adiciona URLs restantes reais;
+    // esconde btnLoadMore se restam < 10 (ou seja, foi a última leva)
     private fun showMoreCovers() {
         val PAGE     = 10
-        val nextUrls = allCoverUrls.drop(shownCount).take(PAGE)
-        if (nextUrls.isEmpty()) { btnLoadMore.visibility = View.GONE; return }
+        val remaining = allCoverUrls.drop(shownCount)
+
+        if (remaining.isEmpty()) {
+            // Não há mais URLs — esconde botão, não adiciona nada (sem espaços em branco)
+            btnLoadMore.visibility = View.GONE
+            return
+        }
+
+        val nextUrls = remaining.take(PAGE)
         coverAdapter.addItems(nextUrls)
         shownCount += nextUrls.size
+
+        // Fix 4: esconde o botão quando esta foi a última leva (nextUrls < PAGE)
         btnLoadMore.visibility =
             if (shownCount < allCoverUrls.size) View.VISIBLE else View.GONE
     }
@@ -294,7 +313,6 @@ class MainActivity : AppCompatActivity() {
                 progressConvert.progress = 100
                 tvProgress.text = "Concluído!"
 
-                // Oculta card de conversão, exibe resultado no lugar
                 cardConvert.visibility = View.GONE
                 cardResult.visibility  = View.VISIBLE
                 tvResult.text =
@@ -303,6 +321,11 @@ class MainActivity : AppCompatActivity() {
                     ":\n$epubFilename"
                 btnEmail.isEnabled = Prefs.isEmailConfigured(this@MainActivity)
 
+                // Scroll até o resultado após sucesso
+                cardResult.post {
+                    mainScrollView.smoothScrollTo(0, cardResult.bottom)
+                }
+
                 cacheDir.listFiles()?.forEach { it.delete() }
 
             } catch (e: Exception) {
@@ -310,7 +333,6 @@ class MainActivity : AppCompatActivity() {
                 tvProgress.visibility       = View.GONE
                 btnConvert.isEnabled        = (selectedCoverUrl != null)
                 btnConvertNoCover.isEnabled = true
-                // Item 2: popup de erro
                 DialogHelper.error(this@MainActivity, "Erro na conversão:\n${e.message}")
             }
         }
@@ -326,7 +348,6 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = EmailSender.send(this@MainActivity, uri, epubFilename)
             if (result.success) {
-                // Item 2: popup de sucesso
                 DialogHelper.success(this@MainActivity, "EPUB enviado por e-mail com sucesso!")
             } else {
                 DialogHelper.error(this@MainActivity, result.error)

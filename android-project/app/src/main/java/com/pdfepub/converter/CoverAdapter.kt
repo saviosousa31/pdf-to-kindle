@@ -17,7 +17,9 @@ import com.bumptech.glide.request.target.Target
 import com.google.android.material.card.MaterialCardView
 
 class CoverAdapter(
-    private val onSelected: (String) -> Unit
+    private val onSelected: (String) -> Unit,
+    /** Chamado quando uma imagem falha ao carregar — permite o host remover a URL da lista */
+    private val onLoadFailed: ((url: String) -> Unit)? = null
 ) : RecyclerView.Adapter<CoverAdapter.VH>() {
 
     private val items = mutableListOf<String>()
@@ -47,6 +49,11 @@ class CoverAdapter(
         fun bind(url: String) {
             val selected = (url == selectedUrl)
 
+            // Garante que o item começa visível a cada bind (RecyclerView recicla views)
+            itemView.visibility = View.VISIBLE
+            itemView.layoutParams.width  = ViewGroup.LayoutParams.WRAP_CONTENT
+            itemView.requestLayout()
+
             if (selected) {
                 card.strokeWidth = 7
                 card.strokeColor = COLOR_SELECTED
@@ -60,7 +67,6 @@ class CoverAdapter(
             itemView.scaleX = if (selected) 1f else 0.96f
             itemView.scaleY = if (selected) 1f else 0.96f
 
-            // Item 6: listener que oculta o item se a imagem falhar (404, sem conteúdo, etc.)
             Glide.with(image.context)
                 .load(url)
                 .apply(
@@ -71,15 +77,27 @@ class CoverAdapter(
                 )
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(
-                        e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean
+                        e: GlideException?,
+                        model: Any?,
+                        target: Target<Drawable>,
+                        isFirstResource: Boolean
                     ): Boolean {
-                        // Oculta o item inteiro quando a imagem não carrega
+                        // Fix 3: oculta o item E colapsa seu espaço — width = 0 evita espaço vazio
                         itemView.visibility = View.GONE
+                        itemView.layoutParams = itemView.layoutParams.also { lp ->
+                            lp.width = 0
+                        }
+                        itemView.requestLayout()
+                        onLoadFailed?.invoke(url)
                         return true
                     }
+
                     override fun onResourceReady(
-                        resource: Drawable, model: Any, target: Target<Drawable>?,
-                        dataSource: DataSource, isFirstResource: Boolean
+                        resource: Drawable,
+                        model: Any,
+                        target: Target<Drawable>?,
+                        dataSource: DataSource,
+                        isFirstResource: Boolean
                     ): Boolean {
                         itemView.visibility = View.VISIBLE
                         return false
