@@ -45,7 +45,7 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="Aparência" android:textSize="14sp"
+                    android:text="Aparência (tema)" android:textSize="14sp"
                     android:fontFamily="sans-serif-medium" android:textStyle="bold"
                     android:textColor="@color/on_surface" android:layout_marginBottom="12dp" />
                 <!-- item 3: sem emojis nas opções -->
