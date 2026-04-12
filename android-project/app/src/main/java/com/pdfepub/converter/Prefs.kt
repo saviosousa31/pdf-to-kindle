@@ -4,25 +4,41 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 
 object Prefs {
-    private const val FILE = "pdfepub_config"
+    // ── Chaves públicas (não-sensíveis) — SharedPreferences normal ─────────
+    private const val FILE_PUBLIC = "pdfepub_config"
 
+    const val DARK_MODE  = "dark_mode"
+    const val SAVE_PATH  = "save_path_uri"
+
+    // ── Chaves sensíveis — armazenadas criptografadas em SecurePrefs ───────
     const val SENDER     = "email_sender"
     const val PASSWORD   = "email_password"
     const val RECIPIENT  = "email_recipient"
     const val SMTP_HOST  = "smtp_host"
     const val SMTP_PORT  = "smtp_port"
     const val SMTP_TLS   = "smtp_tls"
-    const val DARK_MODE  = "dark_mode"
-    /** URI da árvore de diretório escolhida pelo usuário para salvar EPUBs. Vazio = Downloads padrão. */
-    const val SAVE_PATH  = "save_path_uri"
 
-    fun set(ctx: Context, key: String, value: String) =
-        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit().putString(key, value).apply()
+    private val SENSITIVE_KEYS = setOf(SENDER, PASSWORD, RECIPIENT, SMTP_HOST, SMTP_PORT, SMTP_TLS)
 
-    fun get(ctx: Context, key: String, default: String = ""): String =
-        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getString(key, default) ?: default
+    // ── API pública ─────────────────────────────────────────────────────────
+
+    fun set(ctx: Context, key: String, value: String) {
+        if (key in SENSITIVE_KEYS) {
+            SecurePrefs.set(ctx, key, value)
+        } else {
+            ctx.getSharedPreferences(FILE_PUBLIC, Context.MODE_PRIVATE)
+                .edit().putString(key, value).apply()
+        }
+    }
+
+    fun get(ctx: Context, key: String, default: String = ""): String {
+        return if (key in SENSITIVE_KEYS) {
+            SecurePrefs.get(ctx, key, default)
+        } else {
+            ctx.getSharedPreferences(FILE_PUBLIC, Context.MODE_PRIVATE)
+                .getString(key, default) ?: default
+        }
+    }
 
     fun isEmailConfigured(ctx: Context): Boolean {
         val s = get(ctx, SENDER)
@@ -38,6 +54,8 @@ object Prefs {
             else    -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         }
     }
+
+    // ── Resolução SMTP ──────────────────────────────────────────────────────
 
     private val PROVIDERS = mapOf(
         "gmail.com"      to listOf("smtp.gmail.com",      "465","false","true"),

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -51,6 +52,9 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Segurança: impede captura de tela e aparição no app switcher em Settings
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+
         setContentView(R.layout.activity_settings)
         supportActionBar?.title = "Configurações"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -88,11 +92,10 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         btnChoosePath.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).also {
-                it.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            }
             @Suppress("DEPRECATION")
-            startActivityForResult(intent, REQ_TREE)
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).also {
+                it.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }, REQ_TREE)
         }
 
         btnResetPath.setOnClickListener {
@@ -101,9 +104,7 @@ class SettingsActivity : AppCompatActivity() {
             DialogHelper.success(this, "Pasta restaurada para Downloads.")
         }
 
-        // Item 7: testar conexão
         btnTestConnection.setOnClickListener { testEmailConnection() }
-
         btnSave.setOnClickListener { saveValues() }
     }
 
@@ -137,7 +138,9 @@ class SettingsActivity : AppCompatActivity() {
         tvSavePath.text = EpubBuilder.getSavePathLabel(this)
 
         if (Prefs.get(this, Prefs.SMTP_HOST).isNotBlank()) {
-            avancadoExpanded = true; groupAvancado.visibility = View.VISIBLE; tvArrow.text = "▼"
+            avancadoExpanded = true
+            groupAvancado.visibility = View.VISIBLE
+            tvArrow.text = "▼"
         }
         when (Prefs.get(this, Prefs.DARK_MODE, "system")) {
             "light" -> rbLight.isChecked  = true
@@ -161,7 +164,7 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ── Item 7: Testar conexão ─────────────────────────────────────────────
+    // ── Testar conexão ─────────────────────────────────────────────────────
     private fun testEmailConnection() {
         val sender   = etSender.text.toString().trim()
         val password = etPassword.text.toString().trim()
@@ -173,7 +176,6 @@ class SettingsActivity : AppCompatActivity() {
             DialogHelper.warning(this, "Preencha a senha antes de testar."); return
         }
 
-        // Salva temporariamente para usar resolveSmtp()
         Prefs.set(this, Prefs.SENDER,    sender)
         Prefs.set(this, Prefs.SMTP_HOST, etSmtpHost.text.toString().trim())
         Prefs.set(this, Prefs.SMTP_PORT, etSmtpPort.text.toString().trim())
@@ -183,7 +185,7 @@ class SettingsActivity : AppCompatActivity() {
         btnTestConnection.text = "Testando…"
 
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
+            val (ok, msg) = withContext(Dispatchers.IO) {
                 try {
                     val props = Properties().apply {
                         put("mail.smtp.auth",              "true")
@@ -192,7 +194,7 @@ class SettingsActivity : AppCompatActivity() {
                         put("mail.smtp.timeout",           "15000")
                         put("mail.smtp.connectiontimeout", "15000")
                         when {
-                            smtp.useSsl    -> {
+                            smtp.useSsl -> {
                                 put("mail.smtp.ssl.enable",             "true")
                                 put("mail.smtp.ssl.protocols",          "TLSv1.2 TLSv1.3")
                                 put("mail.smtp.socketFactory.port",     smtp.port.toString())
@@ -211,15 +213,14 @@ class SettingsActivity : AppCompatActivity() {
                         override fun getPasswordAuthentication() =
                             PasswordAuthentication(sender, password)
                     })
-                    // connect() verifica autenticação sem enviar nenhum e-mail
                     val transport = session.getTransport("smtp")
                     transport.connect(smtp.host, smtp.port, sender, password)
                     transport.close()
                     Pair(true, "")
                 } catch (e: AuthenticationFailedException) {
-                    Pair(false, "Falha de autenticação.\n• Gmail: use uma Senha de App (veja Ajuda)\n• Outlook: habilite SMTP nas configurações da conta\n\nDetalhe: ${e.message}")
+                    Pair(false, "Falha de autenticação.\n• Gmail: use uma Senha de App (veja Ajuda)\n• Outlook: habilite SMTP nas configurações\n\nDetalhe: ${e.message}")
                 } catch (e: MessagingException) {
-                    Pair(false, "Não foi possível conectar.\nVerifique host, porta e conexão com a internet.\n\nDetalhe: ${e.message}")
+                    Pair(false, "Não foi possível conectar.\nVerifique host, porta e conexão.\n\nDetalhe: ${e.message}")
                 } catch (e: Exception) {
                     Pair(false, "Erro inesperado: ${e.message}")
                 }
@@ -228,13 +229,13 @@ class SettingsActivity : AppCompatActivity() {
             btnTestConnection.isEnabled = true
             btnTestConnection.text = "Testar Conexão de E-mail"
 
-            if (result.first) {
+            if (ok) {
                 DialogHelper.success(this@SettingsActivity,
                     "✅  Conexão bem-sucedida!\n\nSMTP: ${smtp.host}:${smtp.port}\n" +
                     "Modo: ${if (smtp.useSsl) "SSL" else "STARTTLS"}\n\n" +
                     "Suas configurações estão corretas.")
             } else {
-                DialogHelper.error(this@SettingsActivity, result.second)
+                DialogHelper.error(this@SettingsActivity, msg)
             }
         }
     }

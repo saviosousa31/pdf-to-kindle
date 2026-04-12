@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!-- Proibir tráfego HTTP não criptografado em produção -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Confiar nas CAs do sistema (padrão) -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Exceções para provedores SMTP conhecidos (porta 587 STARTTLS é criptografado) -->
+    <!-- Esses domínios só são acessados na porta 465/587 via SSL/TLS, nunca cleartext -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">gmail.com</domain>
+        <domain includeSubdomains="true">google.com</domain>
+        <domain includeSubdomains="true">googleapis.com</domain>
+        <domain includeSubdomains="true">books.google.com</domain>
+        <domain includeSubdomains="true">office365.com</domain>
+        <domain includeSubdomains="true">microsoft.com</domain>
+        <domain includeSubdomains="true">yahoo.com</domain>
+        <domain includeSubdomains="true">mail.me.com</domain>
+        <domain includeSubdomains="true">protonmail.ch</domain>
+        <domain includeSubdomains="true">zoho.com</domain>
+        <domain includeSubdomains="true">amazon.com</domain>
+        <domain includeSubdomains="true">amazon.com.br</domain>
+        <domain includeSubdomains="true">openlibrary.org</domain>
+        <domain includeSubdomains="true">archive.org</domain>
+        <domain includeSubdomains="true">goodreads.com</domain>
+        <domain includeSubdomains="true">bing.com</domain>
+    </domain-config>
+
+</network-security-config>
