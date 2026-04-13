@@ -7,8 +7,16 @@ import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        PDFBoxResourceLoader.init(applicationContext)
-        Prefs.applyDarkMode(this)
+        try {
+            PDFBoxResourceLoader.init(applicationContext)
+        } catch (e: Exception) {
+            android.util.Log.e("App", "Erro ao inicializar PDFBox: ${e.message}")
+        }
+        try {
+            Prefs.applyDarkMode(this)
+        } catch (e: Exception) {
+            android.util.Log.e("App", "Erro ao aplicar dark mode: ${e.message}")
+        }
     }
 
     override fun attachBaseContext(base: Context) {
