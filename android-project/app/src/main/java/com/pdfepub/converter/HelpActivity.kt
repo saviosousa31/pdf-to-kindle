@@ -47,7 +47,7 @@ class HelpActivity : AppCompatActivity() {
             allowUniversalAccessFromFileURLs     = false
             domStorageEnabled                    = false
             databaseEnabled                      = false
-            geolocationEnabled                   = false
+            setGeolocationEnabled(false)
         }
 
         wv.webViewClient = object : WebViewClient() {

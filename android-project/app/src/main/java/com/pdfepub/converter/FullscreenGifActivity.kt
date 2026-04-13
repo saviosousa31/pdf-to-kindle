@@ -49,7 +49,7 @@ class FullscreenGifActivity : AppCompatActivity() {
             allowUniversalAccessFromFileURLs = false
             domStorageEnabled             = false
             databaseEnabled               = false
-            geolocationEnabled            = false
+            setGeolocationEnabled(false)
             setSupportZoom(true)
         }
 
