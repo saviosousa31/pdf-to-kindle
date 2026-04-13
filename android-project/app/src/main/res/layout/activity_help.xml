@@ -19,7 +19,7 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="📬  Como encontrar o e-mail do Kindle"
+                    android:text="@string/help_kindle_email_title_icon"
                     android:textSize="17sp" android:textStyle="bold"
                     android:textColor="@color/primary" android:layout_marginBottom="8dp" />
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -38,7 +38,7 @@
                         android:paddingHorizontal="10dp" android:paddingVertical="5dp"
                         android:clickable="true" android:focusable="true" android:elevation="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="⛶ Tela cheia" android:textSize="11sp"
+                            android:text="@string/btn_fullscreen" android:textSize="11sp"
                             android:textColor="#FFFFFF" android:fontFamily="sans-serif-medium"
                             android:textStyle="bold" />
                     </FrameLayout>
@@ -54,7 +54,7 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="✅  Como autorizar o remetente"
+                    android:text="@string/help_authorize_sender_title_icon"
                     android:textSize="17sp" android:textStyle="bold"
                     android:textColor="@color/primary" android:layout_marginBottom="8dp" />
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -73,7 +73,7 @@
                         android:paddingHorizontal="10dp" android:paddingVertical="5dp"
                         android:clickable="true" android:focusable="true" android:elevation="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="⛶ Tela cheia" android:textSize="11sp"
+                            android:text="@string/btn_fullscreen" android:textSize="11sp"
                             android:textColor="#FFFFFF" android:fontFamily="sans-serif-medium"
                             android:textStyle="bold" />
                     </FrameLayout>
@@ -89,7 +89,7 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="🔑  Como criar a Senha de App no Gmail"
+                    android:text="@string/help_apppassword_title_icon"
                     android:textSize="17sp" android:textStyle="bold"
                     android:textColor="@color/primary" android:layout_marginBottom="12dp" />
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -102,7 +102,7 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHelpClose"
             android:layout_width="match_parent" android:layout_height="52dp"
-            android:text="Entendi, fechar" android:textSize="15sp"
+            android:text="@string/btn_help_close" android:textSize="15sp"
             app:cornerRadius="12dp" />
 
     </LinearLayout>

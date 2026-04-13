@@ -110,4 +110,11 @@
     <string name="downloads_default">Downloads (default)</string>
     <string name="searching">Searching...</string>
     <string name="language_changed">Language changed. Restarting app…</string>
+    <string name="error_pdf_too_large">PDF file is too large (%.1f MB).\nThe limit is 50 MB. Please select a smaller file.</string>
+    <string name="btn_help_close">Got it, close</string>
+    <string name="btn_fullscreen">⛶ Fullscreen</string>
+    <string name="help_kindle_email_title_icon">📬  How to find your Kindle email</string>
+    <string name="help_authorize_sender_title_icon">✅  How to authorize the sender</string>
+    <string name="help_apppassword_title_icon">🔑  How to create a Gmail App Password</string>
+    <string name="test_connection_fail">Could not connect.\nCheck host, port and connection.\n\nDetail: %1$s</string>
 </resources>

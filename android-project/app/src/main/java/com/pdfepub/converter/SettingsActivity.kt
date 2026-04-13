@@ -55,7 +55,6 @@ class SettingsActivity : AppCompatActivity() {
     private var avancadoExpanded = false
     private val REQ_TREE = 200
 
-    // Mapeamento código → posição no spinner
     private val LANG_CODES = listOf("system", "pt", "en", "es", "fr", "de", "it")
 
     override fun attachBaseContext(newBase: Context) {
@@ -122,7 +121,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupLanguageSpinner() {
-        // Nomes visíveis no spinner
         val langNames = listOf(
             getString(R.string.lang_system),
             getString(R.string.lang_pt),
@@ -136,8 +134,7 @@ class SettingsActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerLanguage.adapter = adapter
 
-        // Selecionar o idioma atual
-        val currentLang = Prefs.get(this, Prefs.LANGUAGE, "system")
+        val currentLang = LocaleHelper.getSavedLang(this)
         val idx = LANG_CODES.indexOf(currentLang).coerceAtLeast(0)
         spinnerLanguage.setSelection(idx, false)
 
@@ -146,13 +143,17 @@ class SettingsActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (!initialized) { initialized = true; return }
                 val newLang = LANG_CODES[position]
-                val oldLang = Prefs.get(this@SettingsActivity, Prefs.LANGUAGE, "system")
+                val oldLang = LocaleHelper.getSavedLang(this@SettingsActivity)
                 if (newLang != oldLang) {
+                    // Salvar imediatamente via LocaleHelper (SharedPreferences direto)
+                    LocaleHelper.saveLang(this@SettingsActivity, newLang)
+                    // Atualizar também no Prefs para consistência
                     Prefs.set(this@SettingsActivity, Prefs.LANGUAGE, newLang)
-                    // Reiniciar app para aplicar idioma
+
+                    // Reiniciar o app imediatamente
                     DialogHelper.info(this@SettingsActivity, getString(R.string.language_changed)) {
                         val intent = packageManager.getLaunchIntentForPackage(packageName)
-                        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         startActivity(intent)
                         finishAffinity()
                     }
@@ -210,8 +211,8 @@ class SettingsActivity : AppCompatActivity() {
             Prefs.set(this, Prefs.SENDER, sender)
             val smtp = Prefs.resolveSmtp(this)
             tvSmtpHint.text = getString(
-                R.string.smtp_detected,
-                smtp.host, smtp.port, if (smtp.useSsl) "SSL" else "STARTTLS"
+                R.string.smtp_detected, smtp.host, smtp.port,
+                if (smtp.useSsl) "SSL" else "STARTTLS"
             )
         } else {
             tvSmtpHint.text = getString(R.string.smtp_auto_hint)
@@ -249,8 +250,8 @@ class SettingsActivity : AppCompatActivity() {
                         when {
                             smtp.useSsl -> {
                                 put("mail.smtp.ssl.enable", "true")
-                                put("mail.smtp.socketFactory.port",  "465")
-                                put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
+                                put("mail.smtp.socketFactory.port",     "465")
+                                put("mail.smtp.socketFactory.class",    "javax.net.ssl.SSLSocketFactory")
                                 put("mail.smtp.socketFactory.fallback", "false")
                                 put("mail.smtp.ssl.trust", "smtp.gmail.com")
                             }
@@ -263,8 +264,7 @@ class SettingsActivity : AppCompatActivity() {
                         }
                     }
                     val session = Session.getInstance(props, object : Authenticator() {
-                        override fun getPasswordAuthentication() =
-                            PasswordAuthentication(sender, password)
+                        override fun getPasswordAuthentication() = PasswordAuthentication(sender, password)
                     })
                     val transport = session.getTransport("smtp")
                     transport.connect(smtp.host, smtp.port, sender, password)
@@ -273,7 +273,7 @@ class SettingsActivity : AppCompatActivity() {
                 } catch (e: AuthenticationFailedException) {
                     Pair(false, getString(R.string.auth_failed, e.message ?: ""))
                 } catch (e: MessagingException) {
-                    Pair(false, "Não foi possível conectar.\nVerifique host, porta e conexão.\n\nDetalhe: ${e.message}")
+                    Pair(false, getString(R.string.test_connection_fail, e.message ?: ""))
                 } catch (e: Exception) {
                     Pair(false, getString(R.string.unexpected_error, e.message ?: ""))
                 }
@@ -293,12 +293,19 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun saveValues() {
+        // [FIX 4] E-mail NÃO é obrigatório — usuário pode salvar apenas idioma/tema/pasta
         val sender    = etSender.text.toString().trim()
         val password  = etPassword.text.toString().trim()
         val recipient = etRecipient.text.toString().trim()
-        if (sender.isBlank()    || !sender.contains("@"))    { etSender.error    = getString(R.string.error_invalid_email);    return }
-        if (password.isBlank())                               { etPassword.error  = getString(R.string.error_no_password);     return }
-        if (recipient.isBlank() || !recipient.contains("@")) { etRecipient.error = getString(R.string.error_invalid_recipient); return }
+
+        // Validar apenas se algum campo de email foi preenchido
+        if (sender.isNotBlank() && !sender.contains("@")) {
+            etSender.error = getString(R.string.error_invalid_email); return
+        }
+        if (recipient.isNotBlank() && !recipient.contains("@")) {
+            etRecipient.error = getString(R.string.error_invalid_recipient); return
+        }
+
         Prefs.set(this, Prefs.SENDER,    sender)
         Prefs.set(this, Prefs.PASSWORD,  password)
         Prefs.set(this, Prefs.RECIPIENT, recipient)

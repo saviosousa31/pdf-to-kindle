@@ -31,7 +31,7 @@ class FullscreenGifActivity : AppCompatActivity() {
             return
         }
 
-        val title = intent.getStringExtra("gif_title")?.take(80) ?: "Ajuda"
+        val title = intent.getStringExtra("gif_title")?.take(80) ?: getString(R.string.btn_help)
         supportActionBar?.title = title
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 

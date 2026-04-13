@@ -2,17 +2,18 @@ package com.pdfepub.converter
 
 import android.content.Context
 import android.content.res.Configuration
-import android.os.Build
 import java.util.Locale
 
 object LocaleHelper {
 
-    /** Códigos aceitos pelo app. "system" = seguir o dispositivo. */
     val SUPPORTED = listOf("system", "pt", "en", "es", "fr", "de", "it")
 
-    /** Aplica o locale ao contexto. Chamar em attachBaseContext de cada Activity. */
+    /**
+     * Envolve o contexto com o locale salvo.
+     * Chamar em attachBaseContext() de TODA Activity e do Application.
+     */
     fun wrap(context: Context): Context {
-        val lang = Prefs.get(context, Prefs.LANGUAGE, "system")
+        val lang = getSavedLang(context)
         if (lang == "system") return context
         val locale = Locale(lang)
         Locale.setDefault(locale)
@@ -21,15 +22,17 @@ object LocaleHelper {
         return context.createConfigurationContext(config)
     }
 
-    /** Aplica globalmente (necessário no Application.onCreate). */
-    fun applyLocale(context: Context) {
-        val lang = Prefs.get(context, Prefs.LANGUAGE, "system")
-        if (lang == "system") return
-        val locale = Locale(lang)
-        Locale.setDefault(locale)
-        val config = context.resources.configuration
-        config.setLocale(locale)
-        @Suppress("DEPRECATION")
-        context.resources.updateConfiguration(config, context.resources.displayMetrics)
+    /**
+     * Lê o idioma diretamente de SharedPreferences (sem passar pelo Prefs,
+     * pois Prefs pode não estar inicializado no attachBaseContext do Application).
+     */
+    fun getSavedLang(context: Context): String {
+        return context.getSharedPreferences("pdfepub_config", Context.MODE_PRIVATE)
+            .getString("app_language", "system") ?: "system"
+    }
+
+    fun saveLang(context: Context, lang: String) {
+        context.getSharedPreferences("pdfepub_config", Context.MODE_PRIVATE)
+            .edit().putString("app_language", lang).apply()
     }
 }

@@ -9,7 +9,6 @@ class App : Application() {
         super.onCreate()
         PDFBoxResourceLoader.init(applicationContext)
         Prefs.applyDarkMode(this)
-        LocaleHelper.applyLocale(this)
     }
 
     override fun attachBaseContext(base: Context) {

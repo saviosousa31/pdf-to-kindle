@@ -119,4 +119,11 @@
     <string name="downloads_default">Downloads (padrão)</string>
     <string name="searching">Buscando...</string>
     <string name="language_changed">Idioma alterado. Reiniciando o app…</string>
+    <string name="error_pdf_too_large">Arquivo PDF muito grande (%.1f MB).\nO limite é 50 MB. Selecione um arquivo menor.</string>
+    <string name="btn_help_close">Entendi, fechar</string>
+    <string name="btn_fullscreen">⛶ Tela cheia</string>
+    <string name="help_kindle_email_title_icon">📬  Como encontrar o e-mail do Kindle</string>
+    <string name="help_authorize_sender_title_icon">✅  Como autorizar o remetente</string>
+    <string name="help_apppassword_title_icon">🔑  Como criar a Senha de App no Gmail</string>
+    <string name="test_connection_fail">Não foi possível conectar.\nVerifique host, porta e conexão.\n\nDetalhe: %1$s</string>
 </resources>
