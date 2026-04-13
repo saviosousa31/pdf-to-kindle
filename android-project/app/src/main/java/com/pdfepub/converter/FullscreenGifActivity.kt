@@ -1,5 +1,6 @@
 package com.pdfepub.converter
 
+import android.content.Context
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -11,6 +12,10 @@ import com.google.android.material.button.MaterialButton
 class FullscreenGifActivity : AppCompatActivity() {
 
     private var webView: WebView? = null
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,7 +31,7 @@ class FullscreenGifActivity : AppCompatActivity() {
             return
         }
 
-        val title = intent.getStringExtra("gif_title")?.take(80) ?: "Ajuda"
+        val title = intent.getStringExtra("gif_title")?.take(80) ?: getString(R.string.btn_help)
         supportActionBar?.title = title
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 

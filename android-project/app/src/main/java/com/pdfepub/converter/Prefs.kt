@@ -9,6 +9,7 @@ object Prefs {
 
     const val DARK_MODE  = "dark_mode"
     const val SAVE_PATH  = "save_path_uri"
+    const val LANGUAGE   = "app_language"          // "system" | "pt" | "en" | "es" | "fr" | "de" | "it"
 
     // ── Chaves sensíveis — armazenadas criptografadas em SecurePrefs ───────
     const val SENDER     = "email_sender"

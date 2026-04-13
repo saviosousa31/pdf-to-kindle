@@ -1,5 +1,6 @@
 package com.pdfepub.converter
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.webkit.WebResourceRequest
@@ -14,18 +15,31 @@ class HelpActivity : AppCompatActivity() {
 
     private val webViews = mutableListOf<WebView>()
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_help)
-        supportActionBar?.title = "Ajuda — Configuração Kindle"
+        supportActionBar?.title = getString(R.string.help_title)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        setupGifCard(R.id.webKindleEmail, R.id.btnExpandKindleEmail,
-            "ajuda_email_kindle.gif", "Como encontrar o e-mail do Kindle")
-        setupGifCard(R.id.webAuthSender, R.id.btnExpandAuthSender,
-            "ajuda_habilitar_remetente.gif", "Como autorizar o remetente")
+        setupGifCard(
+            R.id.webKindleEmail, R.id.btnExpandKindleEmail,
+            "ajuda_email_kindle.gif",
+            getString(R.string.help_kindle_email_title)
+        )
+        setupGifCard(
+            R.id.webAuthSender, R.id.btnExpandAuthSender,
+            "ajuda_habilitar_remetente.gif",
+            getString(R.string.help_authorize_sender_title)
+        )
 
-        findViewById<MaterialButton>(R.id.btnHelpClose).setOnClickListener { finish() }
+        findViewById<MaterialButton>(R.id.btnHelpClose).apply {
+            text = getString(R.string.btn_help_close)
+            setOnClickListener { finish() }
+        }
     }
 
     private fun setupGifCard(webId: Int, expandId: Int, gifFile: String, gifTitle: String) {
