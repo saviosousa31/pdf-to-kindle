@@ -1,6 +1,7 @@
 package com.pdfepub.converter
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -71,6 +72,10 @@ class MainActivity : AppCompatActivity() {
 
     private val TXT_NO_COVER  = "Converter para EPUB (Sem capa)"
     private val TXT_HAS_COVER = "Converter para EPUB (Capa selecionada)"
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 

@@ -1,10 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">EPUB Maker: PDF converter</string>
+    <!-- App name -->
+    <string name="app_name">EPUB Maker: PDF to EPUB/Kindle</string>
+    <string name="app_subtitle">Converta PDFs em livros digitais</string>
+
+    <!-- Main Activity -->
+    <string name="status_select_pdf">Selecione um arquivo PDF para começar.</string>
+    <string name="status_epub_ready">✅  EPUB gerado! Baixe ou envie por e-mail.</string>
+    <string name="status_pdf_selected">PDF selecionado. Busque uma capa ou converta.</string>
+    <string name="btn_select_pdf">Selecionar PDF</string>
+    <string name="btn_search_cover">Buscar Capa</string>
+    <string name="btn_search_cover_again">Buscar Capa Novamente</string>
+    <string name="btn_local_cover">🖼  Usar Foto do Celular</string>
+    <string name="btn_remove_cover">Remover</string>
+    <string name="btn_load_more">Carregar mais capas</string>
+    <string name="btn_convert_no_cover">Converter para EPUB (Sem capa)</string>
+    <string name="btn_convert_has_cover">Converter para EPUB (Capa selecionada)</string>
+    <string name="btn_download">⬇  Baixar EPUB</string>
+    <string name="btn_email">Enviar por E-mail</string>
+    <string name="btn_new">Converter Novo Arquivo</string>
+    <string name="label_pdf_file">Arquivo PDF</string>
+    <string name="label_book_cover">Capa do Livro</string>
+    <string name="label_conversion">Conversão</string>
+    <string name="label_no_file">Nenhum arquivo selecionado</string>
+    <string name="label_local_cover_preview">Capa selecionada do celular:</string>
+    <string name="cover_hint_searching">Buscando capas na internet…</string>
+    <string name="cover_hint_not_found">Nenhuma capa encontrada. Verifique o nome do arquivo.</string>
+    <string name="cover_hint_found">%1$d capa(s) encontrada(s). Toque na desejada.</string>
+    <string name="progress_extracting">Extraindo texto do PDF…</string>
+    <string name="progress_page">Extraindo… página %1$d/%2$d</string>
+    <string name="progress_organizing">Organizando %1$d capítulo(s)…</string>
+    <string name="progress_done">Concluído!</string>
+    <string name="result_epub_ready">✅  EPUB pronto!</string>
+    <string name="result_no_cover"> (sem capa)</string>
+    <string name="result_instructions">\n\nClique em Baixar para salvar ou Enviar por E-mail.</string>
+    <string name="error_invalid_image">Imagem inválida ou corrompida. Selecione outra foto.</string>
+    <string name="error_cover_download">Falha ao baixar capa. Tente outra imagem.</string>
+    <string name="error_file_not_found">Arquivo não encontrado. Converta novamente.</string>
+    <string name="sending">Enviando…</string>
+    <string name="epub_sent_ok">✅  EPUB enviado com sucesso!</string>
+    <string name="downloading_cover">Baixando capa…</string>
+    <string name="mounting_epub">Montando EPUB… %1$d/%2$d</string>
+    <string name="cd_settings">Configurações</string>
+
+    <!-- Settings Activity -->
+    <string name="settings_title">Configurações</string>
+    <string name="settings_subtitle">Configure o envio de e-mail para o seu Kindle.</string>
+    <string name="section_appearance">Aparência (tema)</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="section_save_path">Pasta de Destino dos EPUBs</string>
+    <string name="save_path_desc">Onde os EPUBs serão salvos ao clicar em Baixar EPUB.</string>
+    <string name="save_path_default">Downloads (padrão)</string>
+    <string name="btn_change_path">Alterar</string>
+    <string name="btn_reset_path">Restaurar padrão (Downloads)</string>
+    <string name="section_language">Idioma do App</string>
+    <string name="language_desc">Selecione o idioma da interface.</string>
+    <string name="lang_system">Automático (sistema)</string>
+    <string name="lang_pt">Português</string>
+    <string name="lang_en">English</string>
+    <string name="lang_es">Español</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_it">Italiano</string>
+    <string name="section_email">Conta de E-mail</string>
+    <string name="hint_sender">E-mail remetente (quem envia)</string>
+    <string name="hint_password">Senha / Senha de App</string>
+    <string name="gmail_tip">💡 Gmail requer Senha de App — veja em Ajuda como criar</string>
+    <string name="hint_recipient">E-mail do Kindle (destinatário)</string>
+    <string name="smtp_auto_hint">Preencha o e-mail acima para detectar o SMTP automaticamente.</string>
+    <string name="btn_test_connection">Testar Conexão de E-mail</string>
+    <string name="section_smtp">SMTP Manual (opcional)</string>
+    <string name="smtp_desc">Deixe em branco para usar a detecção automática pelo domínio.</string>
+    <string name="hint_smtp_host">Servidor SMTP  (ex: smtp.gmail.com)</string>
+    <string name="hint_smtp_port">Porta SMTP  (465 = SSL  |  587 = STARTTLS)</string>
+    <string name="btn_save">Salvar Configurações</string>
+    <string name="btn_help">Ajuda</string>
+    <string name="testing">Testando…</string>
+    <string name="path_restored">Pasta restaurada para Downloads.</string>
+    <string name="path_saved">Pasta de destino salva:\n%1$s</string>
+    <string name="settings_saved">Configurações salvas com sucesso!</string>
+    <string name="error_invalid_email">E-mail inválido</string>
+    <string name="error_no_password">Informe a senha</string>
+    <string name="error_invalid_recipient">E-mail de destino inválido</string>
+    <string name="warn_fill_email">Preencha o e-mail remetente antes de testar.</string>
+    <string name="warn_fill_password">Preencha a senha antes de testar.</string>
+    <string name="test_success">✅  Conexão bem-sucedida!\n\nSMTP: %1$s:%2$d\nModo: %3$s\n\nSuas configurações estão corretas.</string>
+    <string name="smtp_detected">✅ SMTP detectado: %1$s:%2$d (%3$s)\nDeixe os campos SMTP em branco para usar este.</string>
+
+    <!-- Help Activity -->
+    <string name="help_title">Ajuda — Configuração Kindle</string>
+    <string name="btn_close">Fechar</string>
     <string name="help_kindle_email_title">Como encontrar o e-mail do Kindle</string>
     <string name="help_kindle_email_desc">No app da Amazon, acesse sua conta e vá em "Gerenciar meu Conteúdo e Dispositivos" → selecione seu Kindle → o e-mail aparecerá como "Enviar para Kindle". Use esse endereço no campo de destinatário.</string>
     <string name="help_authorize_sender_title">Como autorizar o remetente no Kindle</string>
     <string name="help_authorize_sender_desc">No app da Amazon, acesse "Gerenciar meu Conteúdo e Dispositivos" → aba "Preferências" → "Configurações do Enviar para Kindle" → adicione o e-mail remetente em "E-mails pessoais autorizados". Sem isso o Kindle rejeitará os documentos.</string>
     <string name="help_apppassword_title">Como criar uma Senha de App no Gmail</string>
-    <string name="help_apppassword_desc">O Gmail exige uma "Senha de App" especial para aplicativos que não usam login pelo navegador. Siga os passos:\n\n1. Acesse myaccount.google.com no seu celular ou computador.\n\n2. Toque em "Segurança" no menu lateral.\n\n3. Role até encontrar "Verificação em duas etapas" e certifique-se de que está ATIVADA. Sem ela, a opção de Senha de App não aparece.\n\n4. Após ativar a verificação em duas etapas, volte para "Segurança" e procure por "Senhas de app" (pode estar em "Como você faz login no Google").\n\n5. Na tela de Senhas de app, selecione "Outro (nome personalizado)" no campo de aplicativo, digite "EPUB Maker" e toque em "Gerar".\n\n6. Uma senha de 16 caracteres será exibida. Copie essa senha e cole no campo "Senha / Senha de App" nas Configurações do EPUB Maker.\n\nOBSERVAÇÃO: Essa senha gerada substitui sua senha normal do Gmail APENAS para este aplicativo. Guarde-a em local seguro.</string>
+    <string name="help_apppassword_desc">O Gmail exige uma \"Senha de App\" especial para aplicativos que não usam login pelo navegador. Siga os passos:\n\n1. Acesse myaccount.google.com no seu celular ou computador.\n\n2. Toque em \"Segurança\" no menu lateral.\n\n3. Role até encontrar \"Verificação em duas etapas\" e certifique-se de que está ATIVADA. Sem ela, a opção de Senha de App não aparece.\n\n4. Após ativar a verificação em duas etapas, volte para \"Segurança\" e procure por \"Senhas de app\" (pode estar em \"Como você faz login no Google\").\n\n5. Na tela de Senhas de app, selecione \"Outro (nome personalizado)\" no campo de aplicativo, digite \"EPUB Maker\" e toque em \"Gerar\".\n\n6. Uma senha de 16 caracteres será exibida. Copie essa senha e cole no campo \"Senha / Senha de App\" nas Configurações do EPUB Maker.\n\nOBSERVAÇÃO: Essa senha gerada substitui sua senha normal do Gmail APENAS para este aplicativo. Guarde-a em local seguro.</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_success">✅  Sucesso</string>
+    <string name="dialog_error">❌  Erro</string>
+    <string name="dialog_warning">⚠️  Atenção</string>
+    <string name="dialog_info">ℹ️  Informação</string>
+    <string name="dialog_ok">OK</string>
+    <string name="epub_saved_ok">✅  EPUB salvo em:\n%1$s\n\n%2$s</string>
+    <string name="email_not_configured">Configure o e-mail nas Configurações.</string>
+    <string name="epub_not_readable">Não foi possível ler o arquivo EPUB.</string>
+    <string name="auth_failed">Falha de autenticação.\n• Gmail: acesse myaccount.google.com/apppasswords e use uma Senha de App.\n• Outlook: verifique se o SMTP está habilitado.\nDetalhe: %1$s</string>
+    <string name="send_error">Erro ao enviar: %1$s\n\nHost: %2$s:%3$d</string>
+    <string name="unexpected_error">Erro inesperado: %1$s</string>
+    <string name="conversion_error">Erro na conversão:\n%1$s</string>
+    <string name="save_error">Erro ao salvar:\n%1$s</string>
+    <string name="dir_not_writable">Não foi possível criar arquivo no diretório selecionado.</string>
+    <string name="downloads_fail">Falha ao criar arquivo em Downloads</string>
+    <string name="custom_dir">Pasta personalizada</string>
+    <string name="downloads_default">Downloads (padrão)</string>
+    <string name="searching">Buscando...</string>
+    <string name="language_changed">Idioma alterado. Reiniciando o app…</string>
 </resources>

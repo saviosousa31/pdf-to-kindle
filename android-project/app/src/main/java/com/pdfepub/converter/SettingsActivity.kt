@@ -1,14 +1,18 @@
 package com.pdfepub.converter
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -46,17 +50,24 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var tvSavePath       : TextView
     private lateinit var btnChoosePath    : MaterialButton
     private lateinit var btnResetPath     : MaterialButton
+    private lateinit var spinnerLanguage  : Spinner
 
     private var avancadoExpanded = false
     private val REQ_TREE = 200
 
+    // Mapeamento código → posição no spinner
+    private val LANG_CODES = listOf("system", "pt", "en", "es", "fr", "de", "it")
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Segurança: impede captura de tela e aparição no app switcher em Settings
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
         setContentView(R.layout.activity_settings)
-        supportActionBar?.title = "Configurações"
+        supportActionBar?.title = getString(R.string.settings_title)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         etSender          = findViewById(R.id.etSender)
@@ -78,7 +89,9 @@ class SettingsActivity : AppCompatActivity() {
         tvSavePath        = findViewById(R.id.tvSavePath)
         btnChoosePath     = findViewById(R.id.btnChoosePath)
         btnResetPath      = findViewById(R.id.btnResetPath)
+        spinnerLanguage   = findViewById(R.id.spinnerLanguage)
 
+        setupLanguageSpinner()
         loadValues()
 
         etSender.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) updateSmtpHint() }
@@ -100,12 +113,53 @@ class SettingsActivity : AppCompatActivity() {
 
         btnResetPath.setOnClickListener {
             Prefs.set(this, Prefs.SAVE_PATH, "")
-            tvSavePath.text = "Downloads (padrão)"
-            DialogHelper.success(this, "Pasta restaurada para Downloads.")
+            tvSavePath.text = getString(R.string.save_path_default)
+            DialogHelper.success(this, getString(R.string.path_restored))
         }
 
         btnTestConnection.setOnClickListener { testEmailConnection() }
         btnSave.setOnClickListener { saveValues() }
+    }
+
+    private fun setupLanguageSpinner() {
+        // Nomes visíveis no spinner
+        val langNames = listOf(
+            getString(R.string.lang_system),
+            getString(R.string.lang_pt),
+            getString(R.string.lang_en),
+            getString(R.string.lang_es),
+            getString(R.string.lang_fr),
+            getString(R.string.lang_de),
+            getString(R.string.lang_it)
+        )
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, langNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerLanguage.adapter = adapter
+
+        // Selecionar o idioma atual
+        val currentLang = Prefs.get(this, Prefs.LANGUAGE, "system")
+        val idx = LANG_CODES.indexOf(currentLang).coerceAtLeast(0)
+        spinnerLanguage.setSelection(idx, false)
+
+        spinnerLanguage.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            var initialized = false
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!initialized) { initialized = true; return }
+                val newLang = LANG_CODES[position]
+                val oldLang = Prefs.get(this@SettingsActivity, Prefs.LANGUAGE, "system")
+                if (newLang != oldLang) {
+                    Prefs.set(this@SettingsActivity, Prefs.LANGUAGE, newLang)
+                    // Reiniciar app para aplicar idioma
+                    DialogHelper.info(this@SettingsActivity, getString(R.string.language_changed)) {
+                        val intent = packageManager.getLaunchIntentForPackage(packageName)
+                        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        finishAffinity()
+                    }
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -119,7 +173,7 @@ class SettingsActivity : AppCompatActivity() {
             )
             Prefs.set(this, Prefs.SAVE_PATH, uri.toString())
             tvSavePath.text = EpubBuilder.getSavePathLabel(this)
-            DialogHelper.success(this, "Pasta de destino salva:\n${tvSavePath.text}")
+            DialogHelper.success(this, getString(R.string.path_saved, tvSavePath.text))
         }
     }
 
@@ -155,25 +209,24 @@ class SettingsActivity : AppCompatActivity() {
         if (sender.contains("@")) {
             Prefs.set(this, Prefs.SENDER, sender)
             val smtp = Prefs.resolveSmtp(this)
-            tvSmtpHint.text =
-                "✅ SMTP detectado: ${smtp.host}:${smtp.port} " +
-                "(${if (smtp.useSsl) "SSL" else "STARTTLS"})\n" +
-                "Deixe os campos SMTP em branco para usar este."
+            tvSmtpHint.text = getString(
+                R.string.smtp_detected,
+                smtp.host, smtp.port, if (smtp.useSsl) "SSL" else "STARTTLS"
+            )
         } else {
-            tvSmtpHint.text = "Preencha o e-mail acima para detectar o SMTP automaticamente."
+            tvSmtpHint.text = getString(R.string.smtp_auto_hint)
         }
     }
 
-    // ── Testar conexão ─────────────────────────────────────────────────────
     private fun testEmailConnection() {
         val sender   = etSender.text.toString().trim()
         val password = etPassword.text.toString().trim()
 
         if (sender.isBlank() || !sender.contains("@")) {
-            DialogHelper.warning(this, "Preencha o e-mail remetente antes de testar."); return
+            DialogHelper.warning(this, getString(R.string.warn_fill_email)); return
         }
         if (password.isBlank()) {
-            DialogHelper.warning(this, "Preencha a senha antes de testar."); return
+            DialogHelper.warning(this, getString(R.string.warn_fill_password)); return
         }
 
         Prefs.set(this, Prefs.SENDER,    sender)
@@ -182,7 +235,7 @@ class SettingsActivity : AppCompatActivity() {
         val smtp = Prefs.resolveSmtp(this)
 
         btnTestConnection.isEnabled = false
-        btnTestConnection.text = "Testando…"
+        btnTestConnection.text = getString(R.string.testing)
 
         lifecycleScope.launch {
             val (ok, msg) = withContext(Dispatchers.IO) {
@@ -195,14 +248,10 @@ class SettingsActivity : AppCompatActivity() {
                         put("mail.smtp.connectiontimeout", "30000")
                         when {
                             smtp.useSsl -> {
-                                // SSL puro — Gmail (465), Yahoo, Zoho
                                 put("mail.smtp.ssl.enable", "true")
-                                // Configura o SocketFactory para Android
-                                put("mail.smtp.socketFactory.port", "465")
+                                put("mail.smtp.socketFactory.port",  "465")
                                 put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
                                 put("mail.smtp.socketFactory.fallback", "false")
-                            
-                                // Evita erros de certificado e define timeouts (boa prática)
                                 put("mail.smtp.ssl.trust", "smtp.gmail.com")
                             }
                             smtp.useStartTls -> {
@@ -222,22 +271,21 @@ class SettingsActivity : AppCompatActivity() {
                     transport.close()
                     Pair(true, "")
                 } catch (e: AuthenticationFailedException) {
-                    Pair(false, "Falha de autenticação.\n• Gmail: use uma Senha de App (veja Ajuda)\n• Outlook: habilite SMTP nas configurações\n\nDetalhe: ${e.message}")
+                    Pair(false, getString(R.string.auth_failed, e.message ?: ""))
                 } catch (e: MessagingException) {
                     Pair(false, "Não foi possível conectar.\nVerifique host, porta e conexão.\n\nDetalhe: ${e.message}")
                 } catch (e: Exception) {
-                    Pair(false, "Erro inesperado: ${e.message}")
+                    Pair(false, getString(R.string.unexpected_error, e.message ?: ""))
                 }
             }
 
             btnTestConnection.isEnabled = true
-            btnTestConnection.text = "Testar Conexão de E-mail"
+            btnTestConnection.text = getString(R.string.btn_test_connection)
 
             if (ok) {
                 DialogHelper.success(this@SettingsActivity,
-                    "✅  Conexão bem-sucedida!\n\nSMTP: ${smtp.host}:${smtp.port}\n" +
-                    "Modo: ${if (smtp.useSsl) "SSL" else "STARTTLS"}\n\n" +
-                    "Suas configurações estão corretas.")
+                    getString(R.string.test_success, smtp.host, smtp.port,
+                        if (smtp.useSsl) "SSL" else "STARTTLS"))
             } else {
                 DialogHelper.error(this@SettingsActivity, msg)
             }
@@ -248,16 +296,16 @@ class SettingsActivity : AppCompatActivity() {
         val sender    = etSender.text.toString().trim()
         val password  = etPassword.text.toString().trim()
         val recipient = etRecipient.text.toString().trim()
-        if (sender.isBlank()    || !sender.contains("@"))    { etSender.error    = "E-mail inválido"; return }
-        if (password.isBlank())                               { etPassword.error  = "Informe a senha"; return }
-        if (recipient.isBlank() || !recipient.contains("@")) { etRecipient.error = "E-mail de destino inválido"; return }
+        if (sender.isBlank()    || !sender.contains("@"))    { etSender.error    = getString(R.string.error_invalid_email);    return }
+        if (password.isBlank())                               { etPassword.error  = getString(R.string.error_no_password);     return }
+        if (recipient.isBlank() || !recipient.contains("@")) { etRecipient.error = getString(R.string.error_invalid_recipient); return }
         Prefs.set(this, Prefs.SENDER,    sender)
         Prefs.set(this, Prefs.PASSWORD,  password)
         Prefs.set(this, Prefs.RECIPIENT, recipient)
         Prefs.set(this, Prefs.SMTP_HOST, etSmtpHost.text.toString().trim())
         Prefs.set(this, Prefs.SMTP_PORT, etSmtpPort.text.toString().trim())
         updateSmtpHint()
-        DialogHelper.success(this, "Configurações salvas com sucesso!")
+        DialogHelper.success(this, getString(R.string.settings_saved))
     }
 
     override fun onSupportNavigateUp(): Boolean { onBackPressedDispatcher.onBackPressed(); return true }

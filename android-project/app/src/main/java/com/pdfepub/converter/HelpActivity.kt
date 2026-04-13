@@ -1,6 +1,7 @@
 package com.pdfepub.converter
 
 import android.content.Intent
+import android.content.Context
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -13,6 +14,10 @@ import com.google.android.material.button.MaterialButton
 class HelpActivity : AppCompatActivity() {
 
     private val webViews = mutableListOf<WebView>()
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
