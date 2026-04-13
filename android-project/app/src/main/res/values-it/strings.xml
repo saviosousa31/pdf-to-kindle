@@ -113,7 +113,7 @@
     <string name="error_pdf_too_large">File PDF troppo grande (%.1f MB).\nIl limite è di 50 MB. Seleziona un file più piccolo.</string>
     <string name="btn_help_close">Capito, chiudi</string>
     <string name="btn_fullscreen">⛶ Schermo intero</string>
-    <string name="help_kindle_email_title_icon">📬  Come trovare l'email del Kindle</string>
+    <string name="help_kindle_email_title_icon">📬  Come trovare l\'email del Kindle</string>
     <string name="help_authorize_sender_title_icon">✅  Come autorizzare il mittente</string>
     <string name="help_apppassword_title_icon">🔑  Come creare una Password App Gmail</string>
     <string name="test_connection_fail">Impossibile connettersi.\nVerifica host, porta e connessione.\n\nDettaglio: %1$s</string>
