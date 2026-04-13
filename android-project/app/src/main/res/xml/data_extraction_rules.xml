@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Exclui preferências sensíveis do backup na nuvem -->
+        <exclude domain="sharedpref" path="pdfepub_secure.xml" />
+        <exclude domain="sharedpref" path="pdfepub_secure_fallback.xml" />
+        <exclude domain="sharedpref" path="pdfepub_config.xml" />
+        <!-- Exclui arquivos de chave de criptografia -->
+        <exclude domain="file" path=".." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="pdfepub_secure.xml" />
+        <exclude domain="sharedpref" path="pdfepub_config.xml" />
+    </device-transfer>
+</data-extraction-rules>

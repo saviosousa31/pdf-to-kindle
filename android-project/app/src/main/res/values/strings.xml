@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PDF para EPUB</string>
+    <string name="app_name">EPUB Maker: PDF converter</string>
+    <string name="help_kindle_email_title">Como encontrar o e-mail do Kindle</string>
+    <string name="help_kindle_email_desc">No app da Amazon, acesse sua conta e vá em "Gerenciar meu Conteúdo e Dispositivos" → selecione seu Kindle → o e-mail aparecerá como "Enviar para Kindle". Use esse endereço no campo de destinatário.</string>
+    <string name="help_authorize_sender_title">Como autorizar o remetente no Kindle</string>
+    <string name="help_authorize_sender_desc">No app da Amazon, acesse "Gerenciar meu Conteúdo e Dispositivos" → aba "Preferências" → "Configurações do Enviar para Kindle" → adicione o e-mail remetente em "E-mails pessoais autorizados". Sem isso o Kindle rejeitará os documentos.</string>
+    <string name="help_apppassword_title">Como criar uma Senha de App no Gmail</string>
+    <string name="help_apppassword_desc">O Gmail exige uma "Senha de App" especial para aplicativos que não usam login pelo navegador. Siga os passos:\n\n1. Acesse myaccount.google.com no seu celular ou computador.\n\n2. Toque em "Segurança" no menu lateral.\n\n3. Role até encontrar "Verificação em duas etapas" e certifique-se de que está ATIVADA. Sem ela, a opção de Senha de App não aparece.\n\n4. Após ativar a verificação em duas etapas, volte para "Segurança" e procure por "Senhas de app" (pode estar em "Como você faz login no Google").\n\n5. Na tela de Senhas de app, selecione "Outro (nome personalizado)" no campo de aplicativo, digite "EPUB Maker" e toque em "Gerar".\n\n6. Uma senha de 16 caracteres será exibida. Copie essa senha e cole no campo "Senha / Senha de App" nas Configurações do EPUB Maker.\n\nOBSERVAÇÃO: Essa senha gerada substitui sua senha normal do Gmail APENAS para este aplicativo. Guarde-a em local seguro.</string>
 </resources>
