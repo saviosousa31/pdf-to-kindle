@@ -25,12 +25,6 @@ object LocaleHelper {
      */
     fun applyLocale(context: Context, lang: String): Context {
         if (lang == "system") return context
-        
-        // ADICIONE ESTA VALIDAÇÃO:
-        if (!SUPPORTED.contains(lang)) {
-            return context  // Retorna contexto original se idioma inválido
-        }
-        
         val locale = Locale(lang)
         Locale.setDefault(locale)
         val config = Configuration(context.resources.configuration)
