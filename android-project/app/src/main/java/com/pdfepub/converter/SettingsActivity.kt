@@ -145,32 +145,22 @@ class SettingsActivity : AppCompatActivity() {
                 val newLang = LANG_CODES[position]
                 val oldLang = LocaleHelper.getSavedLang(this@SettingsActivity)
                 if (newLang != oldLang) {
-                    // 1. Persiste com commit() síncrono para garantir que esteja salvo antes do restart
+                    // Salvar imediatamente via LocaleHelper (SharedPreferences direto)
                     LocaleHelper.saveLang(this@SettingsActivity, newLang)
+                    // Atualizar também no Prefs para consistência
                     Prefs.set(this@SettingsActivity, Prefs.LANGUAGE, newLang)
 
-                    // 2. Constrói o contexto com o NOVO locale para exibir a mensagem correta
-                    val newContext = LocaleHelper.applyLocale(this@SettingsActivity, newLang)
-                    val msg = newContext.getString(R.string.language_changed)
-                    android.widget.Toast.makeText(newContext, msg, android.widget.Toast.LENGTH_SHORT).show()
-
-                    // 3. Reinicia o app imediatamente com a nova linguagem já salva
-                    restartApp()
+                    // Reiniciar o app imediatamente
+                    DialogHelper.info(this@SettingsActivity, getString(R.string.language_changed)) {
+                        val intent = packageManager.getLaunchIntentForPackage(packageName)
+                        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        startActivity(intent)
+                        finishAffinity()
+                    }
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-    }
-
-    private fun restartApp() {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        intent?.addFlags(
-            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-            Intent.FLAG_ACTIVITY_NEW_TASK or
-            Intent.FLAG_ACTIVITY_CLEAR_TASK
-        )
-        startActivity(intent)
-        finishAffinity()
     }
 
     @Suppress("DEPRECATION")
