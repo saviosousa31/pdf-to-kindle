@@ -17,7 +17,7 @@
         android:id="@+id/btnCloseFullscreen"
         android:layout_width="match_parent"
         android:layout_height="52dp"
-        android:text="@string/btn_close"
+        android:text="Fechar"
         android:textSize="15sp"
         android:layout_margin="12dp"
         app:cornerRadius="12dp" />
