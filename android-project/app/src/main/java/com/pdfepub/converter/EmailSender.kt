@@ -38,12 +38,12 @@ object EmailSender {
         val smtp      = Prefs.resolveSmtp(context)
 
         if (sender.isBlank() || password.isBlank() || recipient.isBlank()) {
-            return@withContext Result(false, context.getString(R.string.email_not_configured))
+            return@withContext Result(false, "Configure o e-mail nas Configurações.")
         }
 
         val epubBytes: ByteArray = context.contentResolver.openInputStream(epubUri)
             ?.use { it.readBytes() }
-            ?: return@withContext Result(false, context.getString(R.string.epub_not_readable))
+            ?: return@withContext Result(false, "Não foi possível ler o arquivo EPUB.")
 
         try {
             val props = Properties().apply {
@@ -73,6 +73,7 @@ object EmailSender {
                     }
                     else -> {
                         put("mail.smtp.ssl.enable", "true")
+                        put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3")
                     }
                 }
             }
@@ -110,11 +111,17 @@ object EmailSender {
             Result(true)
 
         } catch (e: AuthenticationFailedException) {
-            Result(false, context.getString(R.string.auth_failed, e.message ?: ""))
+            Result(
+                false,
+                "Falha de autenticação.\n" +
+                "• Gmail: acesse myaccount.google.com/apppasswords e use uma Senha de App.\n" +
+                "• Outlook: verifique se o SMTP está habilitado.\n" +
+                "Detalhe: ${e.message}"
+            )
         } catch (e: MessagingException) {
-            Result(false, context.getString(R.string.send_error, e.message ?: "", smtp.host, smtp.port))
+            Result(false, "Erro ao enviar: ${e.message}\n\nHost: ${smtp.host}:${smtp.port}")
         } catch (e: Exception) {
-            Result(false, context.getString(R.string.unexpected_error, e.message ?: ""))
+            Result(false, "Erro inesperado: ${e.message}")
         }
     }
 }
