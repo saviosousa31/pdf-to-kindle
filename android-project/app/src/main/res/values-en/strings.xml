@@ -90,7 +90,7 @@
     <string name="help_authorize_sender_title">How to authorize the sender on Kindle</string>
     <string name="help_authorize_sender_desc">In the Amazon app, go to "Manage My Content and Devices" → "Preferences" tab → "Send to Kindle Settings" → add the sender email under "Approved Personal Document Emails". Without this, Kindle will reject documents.</string>
     <string name="help_apppassword_title">How to create a Gmail App Password</string>
-    <string name="help_apppassword_desc">Gmail requires a special "App Password" for apps that don't use browser login. Follow these steps:\n\n1. Go to myaccount.google.com.\n\n2. Tap "Security".\n\n3. Find "2-Step Verification" and make sure it is ENABLED.\n\n4. After enabling 2-Step Verification, go back to "Security" and look for "App passwords".\n\n5. Select "Other (custom name)", type "EPUB Maker" and tap "Generate".\n\n6. A 16-character password will appear. Copy and paste it into the "Password / App Password" field in Settings.</string>
+    <string name="help_apppassword_desc">Gmail requires a special "App Password" for apps that don\'t use browser login. Follow these steps:\n\n1. Go to myaccount.google.com.\n\n2. Tap "Security".\n\n3. Find "2-Step Verification" and make sure it is ENABLED.\n\n4. After enabling 2-Step Verification, go back to "Security" and look for "App passwords".\n\n5. Select "Other (custom name)", type "EPUB Maker" and tap "Generate".\n\n6. A 16-character password will appear. Copy and paste it into the "Password / App Password" field in Settings.</string>
     <string name="dialog_success">✅  Success</string>
     <string name="dialog_error">❌  Error</string>
     <string name="dialog_warning">⚠️  Warning</string>
