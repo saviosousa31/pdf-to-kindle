@@ -117,4 +117,32 @@
     <string name="help_authorize_sender_title_icon">✅  So autorisieren Sie den Absender</string>
     <string name="help_apppassword_title_icon">🔑  So erstellen Sie ein Gmail App-Passwort</string>
     <string name="test_connection_fail">Verbindung fehlgeschlagen.\nHost, Port und Verbindung prüfen.\n\nDetail: %1$s</string>
+
+    <!-- Bug Report -->
+    <string name="bug_report_email">support@sslabs.com</string>
+    <string name="bug_report_title">Fehler melden</string>
+    <string name="bug_report_desc_label">Beschreibe das aufgetretene Problem. Du kannst Screenshots oder Videos des Fehlers anhängen (max. 5 Dateien).</string>
+    <string name="bug_title_hint">Fehlertitel *</string>
+    <string name="bug_description_hint">Detaillierte Beschreibung *</string>
+    <string name="bug_attachments_label">Anhänge (optional)</string>
+    <string name="bug_add_attachment">📎 Datei hinzufügen</string>
+    <string name="bug_send">Bericht senden</string>
+    <string name="bug_sent_ok">✅ Bericht erfolgreich gesendet.</string>
+    <string name="bug_title_required">Bitte gib einen Titel für den Fehler ein</string>
+    <string name="bug_desc_required">Bitte gib eine Beschreibung des Fehlers ein</string>
+    <string name="bug_max_attachments">Maximal 5 Anhänge pro Bericht.</string>
+    <string name="bug_no_email_configured">⚠️ Bitte richte deine E-Mail in den Einstellungen ein, bevor du Fehlerberichte sendest.</string>
+    <string name="menu_bug_report">Fehler melden</string>
+    
+    <!-- EPUB Viewer -->
+    <string name="viewer_title">EPUB-Viewer</string>
+    <string name="viewer_loading">EPUB wird geladen…</string>
+    <string name="viewer_prev">◀ Zurück</string>
+    <string name="viewer_next">Weiter ▶</string>
+    <string name="viewer_page_info">%1$d / %2$d</string>
+    <string name="viewer_error">Fehler beim Laden: %1$s</string>
+    <string name="viewer_font_smaller">Kleinere Schrift</string>
+    <string name="viewer_font_larger">Größere Schrift</string>
+    <string name="viewer_night_mode">Nachtmodus</string>
+    <string name="btn_preview">👁 EPUB ansehen</string>
 </resources>

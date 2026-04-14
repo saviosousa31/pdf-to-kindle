@@ -126,4 +126,32 @@
     <string name="help_authorize_sender_title_icon">✅  Como autorizar o remetente</string>
     <string name="help_apppassword_title_icon">🔑  Como criar a Senha de App no Gmail</string>
     <string name="test_connection_fail">Não foi possível conectar.\nVerifique host, porta e conexão.\n\nDetalhe: %1$s</string>
+
+    <!-- Bug Report -->
+    <string name="bug_report_email">support@sslabs.com</string>
+    <string name="bug_report_title">Reportar Bug</string>
+    <string name="bug_report_desc_label">Descreva o problema encontrado. Você pode anexar prints ou vídeos do bug (máx. 5 arquivos).</string>
+    <string name="bug_title_hint">Título do bug *</string>
+    <string name="bug_description_hint">Descrição detalhada *</string>
+    <string name="bug_attachments_label">Anexos (opcional)</string>
+    <string name="bug_add_attachment">📎 Adicionar arquivo</string>
+    <string name="bug_send">Enviar Relatório</string>
+    <string name="bug_sent_ok">✅  Relatório enviado com sucesso.</string>
+    <string name="bug_title_required">Informe um título para o bug</string>
+    <string name="bug_desc_required">Informe uma descrição do bug</string>
+    <string name="bug_max_attachments">Máximo de 5 anexos por relatório.</string>
+    <string name="bug_no_email_configured">⚠️  Configure seu e-mail nas Configurações antes de enviar relatórios de bug.</string>
+    <string name="menu_bug_report">Reportar Bug</string>
+
+    <!-- EPUB Viewer -->
+    <string name="viewer_title">Visualizador EPUB</string>
+    <string name="viewer_loading">Carregando EPUB…</string>
+    <string name="viewer_prev">◀ Anterior</string>
+    <string name="viewer_next">Próximo ▶</string>
+    <string name="viewer_page_info">%1$d / %2$d</string>
+    <string name="viewer_error">Erro ao carregar: %1$s</string>
+    <string name="viewer_font_smaller">Fonte menor</string>
+    <string name="viewer_font_larger">Fonte maior</string>
+    <string name="viewer_night_mode">Modo Noturno</string>
+    <string name="btn_preview">👁  Visualizar EPUB</string>
 </resources>

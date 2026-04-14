@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0">
+<title>EPUB Viewer</title>
+<style>
+  :root {
+    --bg: #f8f9ff;
+    --fg: #1c1b1f;
+    --link: #1a73e8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Georgia, 'Times New Roman', serif;
+    overflow: hidden;
+  }
+  #viewer {
+    width: 100%;
+    height: 100%;
+    padding: 0 4px;
+  }
+  /* Night mode */
+  body.night {
+    --bg: #121218;
+    --fg: #e6e1e5;
+  }
+  body.night #viewer { background: #121218; }
+
+  #error-msg {
+    display: none;
+    padding: 20px;
+    color: #b3261e;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div id="viewer"></div>
+<div id="error-msg"></div>
+
+<!-- epub.js 0.3.93 via CDN — carregado do cache do WebView após primeira vez -->
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+<script>
+var book = null;
+var rendition = null;
+var totalLocations = 0;
+var currentPage = 1;
+var nightMode = false;
+var fontSize = 100; // percent
+
+function loadEpubBase64(b64) {
+  try {
+    // Converter base64 para ArrayBuffer
+    var binary = atob(b64);
+    var len = binary.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    var buffer = bytes.buffer;
+
+    book = ePub(buffer);
+    rendition = book.renderTo("viewer", {
+      width: "100%",
+      height: "100%",
+      spread: "none",
+      flow: "paginated"
+    });
+
+    rendition.display().then(function() {
+      // Gerar locations para paginação
+      return book.locations.generate(1024);
+    }).then(function(locations) {
+      totalLocations = locations.length || 1;
+      notifyPageChanged();
+    }).catch(function(e) {
+      showError("Render error: " + e);
+    });
+
+    rendition.on("relocated", function(location) {
+      notifyPageChanged();
+    });
+
+    rendition.on("keyup", function(e) {
+      if (e.keyCode === 37) prevPage();
+      if (e.keyCode === 39) nextPage();
+    });
+
+    // Aplicar tema atual
+    applyTheme();
+
+  } catch(e) {
+    showError("Load error: " + (e.message || e));
+  }
+}
+
+function notifyPageChanged() {
+  if (!book || !rendition) return;
+  try {
+    var loc = rendition.currentLocation();
+    if (loc && loc.start) {
+      var pct = book.locations.percentageFromCfi(loc.start.cfi);
+      currentPage = Math.max(1, Math.round(pct * totalLocations) + 1);
+    }
+    if (window.AndroidBridge) {
+      AndroidBridge.onPageChanged(currentPage, Math.max(totalLocations, 1));
+    }
+  } catch(e) {}
+}
+
+function prevPage() {
+  if (rendition) rendition.prev().then(notifyPageChanged);
+}
+
+function nextPage() {
+  if (rendition) rendition.next().then(notifyPageChanged);
+}
+
+function changeFontSize(delta) {
+  fontSize = Math.max(60, Math.min(200, fontSize + delta));
+  if (rendition) rendition.themes.fontSize(fontSize + "%");
+}
+
+function toggleNightMode() {
+  nightMode = !nightMode;
+  document.body.classList.toggle("night", nightMode);
+  applyTheme();
+}
+
+function applyTheme() {
+  if (!rendition) return;
+  if (nightMode) {
+    rendition.themes.register("night", {
+      "body": { "background": "#121218 !important", "color": "#e6e1e5 !important" },
+      "p"   : { "color": "#e6e1e5 !important" }
+    });
+    rendition.themes.select("night");
+  } else {
+    rendition.themes.register("day", {
+      "body": { "background": "#f8f9ff !important", "color": "#1c1b1f !important" },
+      "p"   : { "color": "#1c1b1f !important" }
+    });
+    rendition.themes.select("day");
+  }
+}
+
+function showError(msg) {
+  var el = document.getElementById("error-msg");
+  el.style.display = "block";
+  el.textContent = msg;
+  if (window.AndroidBridge) AndroidBridge.onError(msg);
+}
+</script>
+</body>
+</html>

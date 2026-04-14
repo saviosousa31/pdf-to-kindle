@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_font_smaller"
+        android:title="@string/viewer_font_smaller"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_font_larger"
+        android:title="@string/viewer_font_larger"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_night_mode"
+        android:title="@string/viewer_night_mode"
+        app:showAsAction="never" />
+
+</menu>

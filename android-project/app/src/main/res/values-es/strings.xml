@@ -117,4 +117,32 @@
     <string name="help_authorize_sender_title_icon">✅  Cómo autorizar al remitente</string>
     <string name="help_apppassword_title_icon">🔑  Cómo crear una Contraseña de App de Gmail</string>
     <string name="test_connection_fail">No se pudo conectar.\nVerifica host, puerto y conexión.\n\nDetalle: %1$s</string>
+
+    <!-- Bug Report -->
+    <string name="bug_report_email">support@sslabs.com</string>
+    <string name="bug_report_title">Reportar error</string>
+    <string name="bug_report_desc_label">Describe el problema encontrado. Puedes adjuntar capturas o videos del error (máx. 5 archivos).</string>
+    <string name="bug_title_hint">Título del error *</string>
+    <string name="bug_description_hint">Descripción detallada *</string>
+    <string name="bug_attachments_label">Adjuntos (opcional)</string>
+    <string name="bug_add_attachment">📎 Añadir archivo</string>
+    <string name="bug_send">Enviar informe</string>
+    <string name="bug_sent_ok">✅ ¡Informe enviado con éxito.</string>
+    <string name="bug_title_required">Indica un título para el error</string>
+    <string name="bug_desc_required">Indica una descripción del error</string>
+    <string name="bug_max_attachments">Máximo de 5 adjuntos por informe.</string>
+    <string name="bug_no_email_configured">⚠️ Configura tu correo en Ajustes antes de enviar informes de error.</string>
+    <string name="menu_bug_report">Reportar error</string>
+    
+    <!-- EPUB Viewer -->
+    <string name="viewer_title">Visor EPUB</string>
+    <string name="viewer_loading">Cargando EPUB…</string>
+    <string name="viewer_prev">◀ Anterior</string>
+    <string name="viewer_next">Siguiente ▶</string>
+    <string name="viewer_page_info">%1$d / %2$d</string>
+    <string name="viewer_error">Error al cargar: %1$s</string>
+    <string name="viewer_font_smaller">Fuente más pequeña</string>
+    <string name="viewer_font_larger">Fuente más grande</string>
+    <string name="viewer_night_mode">Modo nocturno</string>
+    <string name="btn_preview">👁 Ver EPUB</string>
 </resources>
