@@ -127,7 +127,7 @@
     <string name="bug_attachments_label">Pièces jointes (facultatif)</string>
     <string name="bug_add_attachment">📎 Ajouter un fichier</string>
     <string name="bug_send">Envoyer le rapport</string>
-    <string name="bug_sent_ok">✅ Rapport envoyé avec succès !\n\nMerci de nous aider à améliorer l'application.</string>
+    <string name="bug_sent_ok">✅ Rapport envoyé avec succès.</string>
     <string name="bug_title_required">Veuillez indiquer un titre pour le bug</string>
     <string name="bug_desc_required">Veuillez indiquer une description du bug</string>
     <string name="bug_max_attachments">Maximum de 5 pièces jointes par rapport.</string>
