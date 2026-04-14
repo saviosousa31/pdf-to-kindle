@@ -127,7 +127,7 @@
     <string name="bug_attachments_label">Allegati (opzionale)</string>
     <string name="bug_add_attachment">📎 Aggiungi file</string>
     <string name="bug_send">Invia segnalazione</string>
-    <string name="bug_sent_ok">✅ Segnalazione inviata con successo!\n\nGrazie per aiutarci a migliorare l'app.</string>
+    <string name="bug_sent_ok">✅ Segnalazione inviata con successo.</string>
     <string name="bug_title_required">Inserisci un titolo per il bug</string>
     <string name="bug_desc_required">Inserisci una descrizione del bug</string>
     <string name="bug_max_attachments">Massimo 5 allegati per segnalazione.</string>
