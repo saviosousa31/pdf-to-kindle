@@ -136,31 +136,42 @@ class SettingsActivity : AppCompatActivity() {
 
         val currentLang = LocaleHelper.getSavedLang(this)
         val idx = LANG_CODES.indexOf(currentLang).coerceAtLeast(0)
-        spinnerLanguage.setSelection(idx, false)
 
+        // Listener registrado ANTES do setSelection.
+        // A guarda é a comparação newLang == savedLang:
+        //   - Callback automático do setSelection: newLang == savedLang → ignorado (sem loop)
+        //   - Seleção real do usuário: newLang != savedLang → processa normalmente
+        // Isso corrige o bug do "initialized" flag: quando o idioma salvo é "system"
+        // (posição 0) e o spinner já está em 0, setSelection(0) NÃO dispara onItemSelected,
+        // então o flag ficava false e a primeira seleção do usuário era ignorada.
         spinnerLanguage.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            var initialized = false
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (!initialized) { initialized = true; return }
                 val newLang = LANG_CODES[position]
-                val oldLang = LocaleHelper.getSavedLang(this@SettingsActivity)
-                if (newLang != oldLang) {
-                    // Salvar imediatamente via LocaleHelper (SharedPreferences direto)
-                    LocaleHelper.saveLang(this@SettingsActivity, newLang)
-                    // Atualizar também no Prefs para consistência
-                    Prefs.set(this@SettingsActivity, Prefs.LANGUAGE, newLang)
+                val savedLang = LocaleHelper.getSavedLang(this@SettingsActivity)
+                // Ignorar callbacks automáticos (setSelection, restart) — idioma não mudou
+                if (newLang == savedLang) return
 
-                    // Reiniciar o app imediatamente
-                    DialogHelper.info(this@SettingsActivity, getString(R.string.language_changed)) {
-                        val intent = packageManager.getLaunchIntentForPackage(packageName)
-                        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        startActivity(intent)
-                        finishAffinity()
-                    }
+                // Salvar imediatamente antes de mostrar o diálogo
+                LocaleHelper.saveLang(this@SettingsActivity, newLang)
+                Prefs.set(this@SettingsActivity, Prefs.LANGUAGE, newLang)
+
+                // Reiniciar o app para aplicar o novo idioma
+                DialogHelper.info(this@SettingsActivity, getString(R.string.language_changed)) {
+                    val intent = packageManager.getLaunchIntentForPackage(packageName)
+                    intent?.addFlags(
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    )
+                    startActivity(intent)
+                    finishAffinity()
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+
+        // setSelection depois do listener — callback inicial terá newLang == savedLang → ignorado
+        spinnerLanguage.setSelection(idx, false)
     }
 
     @Suppress("DEPRECATION")
