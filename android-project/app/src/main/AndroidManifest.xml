@@ -47,6 +47,19 @@
             android:theme="@style/Theme.PdfEpub.Help"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=\".BugReportActivity\"
+            android:exported=\"false\"
+            android:theme=\"@style/Theme.PdfEpub.Settings\"
+            android:windowSoftInputMode=\"adjustResize\" />
+
+        <activity
+            android:name=\".EpubViewerActivity\"
+            android:exported=\"false\"
+            android:theme=\"@style/Theme.PdfEpub.Help\"
+            android:configChanges=\"orientation|screenSize\"
+            android:windowSoftInputMode=\"adjustResize\" />
+
         <!-- FileProvider para compartilhar cache de EPUB de forma segura -->
         <provider
             android:name="androidx.core.content.FileProvider"
