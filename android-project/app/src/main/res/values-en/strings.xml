@@ -127,7 +127,7 @@
     <string name="bug_attachments_label">Attachments (optional)</string>
     <string name="bug_add_attachment">📎 Add file</string>
     <string name="bug_send">Send Report</string>
-    <string name="bug_sent_ok">✅ Report sent successfully!\n\nThank you for helping us improve the app.</string>
+    <string name="bug_sent_ok">✅ Report sent successfully.</string>
     <string name="bug_title_required">Please enter a bug title</string>
     <string name="bug_desc_required">Please enter a bug description</string>
     <string name="bug_max_attachments">Maximum of 5 attachments per report.</string>
