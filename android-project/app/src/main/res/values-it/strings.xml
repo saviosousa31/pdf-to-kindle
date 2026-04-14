@@ -117,4 +117,32 @@
     <string name="help_authorize_sender_title_icon">✅  Come autorizzare il mittente</string>
     <string name="help_apppassword_title_icon">🔑  Come creare una Password App Gmail</string>
     <string name="test_connection_fail">Impossibile connettersi.\nVerifica host, porta e connessione.\n\nDettaglio: %1$s</string>
+
+    <!-- Bug Report -->
+    <string name="bug_report_email">support@sslabs.com</string>
+    <string name="bug_report_title">Segnala bug</string>
+    <string name="bug_report_desc_label">Descrivi il problema riscontrato. Puoi allegare screenshot o video del bug (max 5 file).</string>
+    <string name="bug_title_hint">Titolo del bug *</string>
+    <string name="bug_description_hint">Descrizione dettagliata *</string>
+    <string name="bug_attachments_label">Allegati (opzionale)</string>
+    <string name="bug_add_attachment">📎 Aggiungi file</string>
+    <string name="bug_send">Invia segnalazione</string>
+    <string name="bug_sent_ok">✅ Segnalazione inviata con successo!\n\nGrazie per aiutarci a migliorare l'app.</string>
+    <string name="bug_title_required">Inserisci un titolo per il bug</string>
+    <string name="bug_desc_required">Inserisci una descrizione del bug</string>
+    <string name="bug_max_attachments">Massimo 5 allegati per segnalazione.</string>
+    <string name="bug_no_email_configured">⚠️ Configura la tua e-mail nelle Impostazioni prima di inviare segnalazioni di bug.</string>
+    <string name="menu_bug_report">Segnala bug</string>
+    
+    <!-- EPUB Viewer -->
+    <string name="viewer_title">Visualizzatore EPUB</string>
+    <string name="viewer_loading">Caricamento EPUB…</string>
+    <string name="viewer_prev">◀ Precedente</string>
+    <string name="viewer_next">Successivo ▶</string>
+    <string name="viewer_page_info">%1$d / %2$d</string>
+    <string name="viewer_error">Errore durante il caricamento: %1$s</string>
+    <string name="viewer_font_smaller">Carattere più piccolo</string>
+    <string name="viewer_font_larger">Carattere più grande</string>
+    <string name="viewer_night_mode">Modalità notturna</string>
+    <string name="btn_preview">👁 Visualizza EPUB</string>
 </resources>
