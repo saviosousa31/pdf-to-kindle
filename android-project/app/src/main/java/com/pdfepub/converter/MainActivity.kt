@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnEmail           : MaterialButton
     private lateinit var btnNew             : MaterialButton
     private lateinit var btnSettings        : ImageButton
+    private lateinit var btnPreview         : MaterialButton
 
     private lateinit var coverAdapter: CoverAdapter
 
@@ -111,6 +112,7 @@ class MainActivity : AppCompatActivity() {
         btnEmail            = findViewById(R.id.btnEmail)
         btnNew              = findViewById(R.id.btnNew)
         btnSettings         = findViewById(R.id.btnSettings)
+        btnPreview          = findViewById(R.id.btnPreview)
     }
 
     private fun setupCoverRecycler() {
@@ -153,6 +155,7 @@ class MainActivity : AppCompatActivity() {
         btnDownload.setOnClickListener         { downloadEpub() }
         btnEmail.setOnClickListener            { sendEmail() }
         btnNew.setOnClickListener              { resetAll() }
+        btnPreview.setOnClickListener          { openEpubViewer() }
     }
 
     @Suppress("DEPRECATION")
@@ -399,6 +402,32 @@ class MainActivity : AppCompatActivity() {
                 btnEmail.isEnabled = true
             }
             btnEmail.text = getString(R.string.btn_email)
+        }
+    }
+
+    private fun openEpubViewer() {
+        val f = epubCacheFile ?: run {
+            DialogHelper.error(this, getString(R.string.error_file_not_found)); return
+        }
+        val intent = Intent(this, EpubViewerActivity::class.java).apply {
+            putExtra(EpubViewerActivity.EXTRA_EPUB_PATH, f.absolutePath)
+            putExtra(EpubViewerActivity.EXTRA_EPUB_TITLE, epubFilename)
+        }
+        startActivity(intent)
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+    
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_bug_report -> {
+                startActivity(Intent(this, BugReportActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
