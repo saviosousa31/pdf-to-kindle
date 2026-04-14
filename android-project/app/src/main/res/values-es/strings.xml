@@ -127,7 +127,7 @@
     <string name="bug_attachments_label">Adjuntos (opcional)</string>
     <string name="bug_add_attachment">📎 Añadir archivo</string>
     <string name="bug_send">Enviar informe</string>
-    <string name="bug_sent_ok">✅ ¡Informe enviado con éxito!\n\nGracias por ayudarnos a mejorar la app.</string>
+    <string name="bug_sent_ok">✅ ¡Informe enviado con éxito.</string>
     <string name="bug_title_required">Indica un título para el error</string>
     <string name="bug_desc_required">Indica una descripción del error</string>
     <string name="bug_max_attachments">Máximo de 5 adjuntos por informe.</string>
