@@ -127,7 +127,7 @@
     <string name="bug_attachments_label">Anhänge (optional)</string>
     <string name="bug_add_attachment">📎 Datei hinzufügen</string>
     <string name="bug_send">Bericht senden</string>
-    <string name="bug_sent_ok">✅ Bericht erfolgreich gesendet!\n\nDanke, dass du uns hilfst, die App zu verbessern.</string>
+    <string name="bug_sent_ok">✅ Bericht erfolgreich gesendet.</string>
     <string name="bug_title_required">Bitte gib einen Titel für den Fehler ein</string>
     <string name="bug_desc_required">Bitte gib eine Beschreibung des Fehlers ein</string>
     <string name="bug_max_attachments">Maximal 5 Anhänge pro Bericht.</string>
