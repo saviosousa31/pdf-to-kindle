@@ -23,13 +23,11 @@
     height: 100%;
     padding: 0 4px;
   }
-  /* Night mode */
   body.night {
     --bg: #121218;
     --fg: #e6e1e5;
   }
   body.night #viewer { background: #121218; }
-
   #error-msg {
     display: none;
     padding: 20px;
@@ -42,7 +40,6 @@
 <div id="viewer"></div>
 <div id="error-msg"></div>
 
-<!-- epub.js 0.3.93 via CDN — carregado do cache do WebView após primeira vez -->
 <script src="epub.min.js"></script>
 <script>
 var book = null;
@@ -50,7 +47,7 @@ var rendition = null;
 var totalLocations = 0;
 var currentPage = 1;
 var nightMode = false;
-var fontSize = 100; // percent
+var fontSize = 100;
 
 function loadEpubFromUrl(epubUrl) {
   try {
@@ -68,16 +65,19 @@ function loadEpubFromUrl(epubUrl) {
     });
 
     rendition.display().then(function() {
-      // Gerar locations para paginação
       return book.locations.generate(1024);
     }).then(function(locations) {
       totalLocations = locations.length || 1;
       notifyPageChanged();
+      applyTheme();
+      if (fontSize !== 100) {
+        rendition.themes.fontSize(fontSize + "%");
+      }
     }).catch(function(e) {
       showError("Render error: " + e);
     });
 
-    rendition.on("relocated", function(location) {
+    rendition.on("relocated", function() {
       notifyPageChanged();
     });
 
@@ -85,10 +85,6 @@ function loadEpubFromUrl(epubUrl) {
       if (e.keyCode === 37) prevPage();
       if (e.keyCode === 39) nextPage();
     });
-
-    // Aplicar tema atual
-    applyTheme();
-
   } catch(e) {
     showError("Load error: " + (e.message || e));
   }
@@ -132,13 +128,13 @@ function applyTheme() {
   if (nightMode) {
     rendition.themes.register("night", {
       "body": { "background": "#121218 !important", "color": "#e6e1e5 !important" },
-      "p"   : { "color": "#e6e1e5 !important" }
+      "p": { "color": "#e6e1e5 !important" }
     });
     rendition.themes.select("night");
   } else {
     rendition.themes.register("day", {
       "body": { "background": "#f8f9ff !important", "color": "#1c1b1f !important" },
-      "p"   : { "color": "#1c1b1f !important" }
+      "p": { "color": "#1c1b1f !important" }
     });
     rendition.themes.select("day");
   }
