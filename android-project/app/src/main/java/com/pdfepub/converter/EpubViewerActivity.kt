@@ -29,6 +29,8 @@ class EpubViewerActivity : AppCompatActivity() {
     private lateinit var tvPageInfo     : TextView
     private lateinit var bottomBar      : LinearLayout
 
+    private var epubLoaded              = false
+
     companion object {
         const val EXTRA_EPUB_PATH = "epub_path"
         const val EXTRA_EPUB_TITLE = "epub_title"
@@ -101,7 +103,6 @@ class EpubViewerActivity : AppCompatActivity() {
                 if (epubLoaded) return
                 epubLoaded = true
             
-                // Passa apenas o caminho local do arquivo; evita enviar o EPUB inteiro via JS.
                 val epubUrl = File(epubPath).toURI().toString()
                     .replace("\\", "\\\\")
                     .replace("'", "\\'")
@@ -149,6 +150,7 @@ class EpubViewerActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
     override fun onDestroy() {
+        epubLoaded = false
         webView.stopLoading()
         webView.destroy()
         super.onDestroy()
