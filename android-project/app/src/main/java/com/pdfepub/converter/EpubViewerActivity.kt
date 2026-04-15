@@ -64,16 +64,22 @@ class EpubViewerActivity : AppCompatActivity() {
 
     private fun setupWebView(epubPath: String) {
         webView.settings.apply {
-            javaScriptEnabled         = true   // necessário para epub.js
-            allowFileAccess           = true   // necessário para ler o epub local
-            allowContentAccess        = true
-            domStorageEnabled         = true
-            cacheMode                 = WebSettings.LOAD_NO_CACHE
+            javaScriptEnabled                = true   // necessário para epub.js
+            allowFileAccess                  = true   // necessário para ler o epub local
+            allowContentAccess               = true
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs      = true
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = true
+            domStorageEnabled                = true
+            cacheMode                        = WebSettings.LOAD_NO_CACHE
             setSupportZoom(true)
-            builtInZoomControls       = true
-            displayZoomControls       = false
-            useWideViewPort           = true
-            loadWithOverviewMode      = true
+            builtInZoomControls              = true
+            displayZoomControls              = false
+            useWideViewPort                  = true
+            loadWithOverviewMode             = true
+        }
+        webView.settings.apply {
         }
 
         // Interface JS → Kotlin para receber eventos do epub.js
@@ -92,10 +98,14 @@ class EpubViewerActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = false
             override fun onPageFinished(view: WebView, url: String) {
-                // Injetar o caminho do EPUB codificado em base64 para evitar problemas de path
-                val epubBytes = File(epubPath).readBytes()
-                val b64 = Base64.encodeToString(epubBytes, Base64.NO_WRAP)
-                view.evaluateJavascript("loadEpubBase64('$b64')", null)
+                if (epubLoaded) return
+                epubLoaded = true
+            
+                // Passa apenas o caminho local do arquivo; evita enviar o EPUB inteiro via JS.
+                val epubUrl = File(epubPath).toURI().toString()
+                    .replace("\\", "\\\\")
+                    .replace("'", "\\'")
+                view.evaluateJavascript("loadEpubFromUrl('$epubUrl')", null)
             }
         }
 
