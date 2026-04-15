@@ -52,16 +52,14 @@ var currentPage = 1;
 var nightMode = false;
 var fontSize = 100; // percent
 
-function loadEpubBase64(b64) {
+function loadEpubFromUrl(epubUrl) {
   try {
-    // Converter base64 para ArrayBuffer
-    var binary = atob(b64);
-    var len = binary.length;
-    var bytes = new Uint8Array(len);
-    for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
-    var buffer = bytes.buffer;
+    if (!epubUrl) {
+      showError("Missing EPUB URL");
+      return;
+    }
 
-    book = ePub(buffer);
+    book = ePub(epubUrl);
     rendition = book.renderTo("viewer", {
       width: "100%",
       height: "100%",
