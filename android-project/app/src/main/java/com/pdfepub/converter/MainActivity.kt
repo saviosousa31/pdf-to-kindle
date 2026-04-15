@@ -211,6 +211,7 @@ class MainActivity : AppCompatActivity() {
 
         cacheDir.listFiles()?.filter { it.name.startsWith("epub_") }?.forEach { it.delete() }
         updateUI()
+        btnConvert.isEnabled        = true
     }
 
     private fun handleGalleryImageSelected(uri: Uri) {
@@ -417,7 +418,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_viewer, menu)
+        menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
     
