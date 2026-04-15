@@ -8,8 +8,8 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.webkit.WebViewAssetLoader
 import com.google.android.material.button.MaterialButton
 import java.io.File
 
@@ -31,6 +32,8 @@ class EpubViewerActivity : AppCompatActivity() {
     private lateinit var bottomBar: LinearLayout
 
     private lateinit var epubFile: File
+    private lateinit var epubViewerDir: File
+    private lateinit var assetLoader: WebViewAssetLoader
     private var epubLoaded = false
 
     companion object {
@@ -38,11 +41,9 @@ class EpubViewerActivity : AppCompatActivity() {
         const val EXTRA_EPUB_TITLE = "epub_title"
 
         private const val TAG = "EpubViewerActivity"
-        private const val VIEWER_URL = "https://localhost/epub_viewer/index.html"
-        private const val EPUB_URL = "https://localhost/epub/book.epub"
-        private const val ASSET_INDEX_PATH = "/epub_viewer/index.html"
-        private const val ASSET_JS_PATH = "/epub_viewer/epub.min.js"
-        private const val EPUB_PATH = "/epub/book.epub"
+        private const val APP_ASSET_HOST = "appassets.androidplatform.net"
+        private val VIEWER_URL = "https://$APP_ASSET_HOST/assets/epub_viewer/index.html"
+        private val EPUB_URL = "https://$APP_ASSET_HOST/epub/book.epub"
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -82,6 +83,29 @@ class EpubViewerActivity : AppCompatActivity() {
             return
         }
 
+        // Stage the EPUB inside cacheDir so it can be safely exposed via HTTPS.
+        epubViewerDir = File(cacheDir, "epub_viewer").apply { mkdirs() }
+        val stagedEpub = File(epubViewerDir, "book.epub")
+
+        try {
+            epubFile.inputStream().use { input ->
+                stagedEpub.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stage EPUB for preview", e)
+            tvLoading.text = getString(R.string.viewer_error, e.message ?: "Failed to prepare EPUB")
+            progressBar.visibility = View.GONE
+            bottomBar.visibility = View.VISIBLE
+            return
+        }
+
+        assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/epub/", WebViewAssetLoader.InternalStoragePathHandler(this, epubViewerDir))
+            .build()
+
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -92,7 +116,7 @@ class EpubViewerActivity : AppCompatActivity() {
             useWideViewPort = true
             loadWithOverviewMode = true
 
-            // The viewer is loaded from our own intercepted HTTPS origin.
+            // Use WebViewAssetLoader (HTTPS appassets) instead of file:// access.
             allowFileAccess = false
             allowContentAccess = false
             @Suppress("DEPRECATION")
@@ -127,51 +151,40 @@ class EpubViewerActivity : AppCompatActivity() {
             }
 
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                val url = request.url
-                val path = url.path ?: return null
-
-                return when {
-                    url.scheme == "https" && path == ASSET_INDEX_PATH -> serveAsset("epub_viewer/index.html", "text/html; charset=UTF-8")
-                    url.scheme == "https" && path == ASSET_JS_PATH -> serveAsset("epub_viewer/epub.min.js", "application/javascript; charset=UTF-8")
-                    url.scheme == "https" && path == EPUB_PATH && epubFile.exists() && epubFile.isFile -> serveEpub()
-                    else -> null
-                }
+                return assetLoader.shouldInterceptRequest(request.url)
             }
 
             override fun onPageFinished(view: WebView, url: String) {
                 if (epubLoaded) return
                 epubLoaded = true
 
+                if (!stagedEpub.exists() || !stagedEpub.isFile) {
+                    tvLoading.text = getString(R.string.viewer_error, "Staged EPUB not found")
+                    progressBar.visibility = View.GONE
+                    bottomBar.visibility = View.VISIBLE
+                    return
+                }
+
                 view.post {
                     view.evaluateJavascript("loadEpubFromUrl('$EPUB_URL')", null)
+                }
+            }
+
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceError
+            ) {
+                if (request.isForMainFrame) {
+                    progressBar.visibility = View.GONE
+                    tvLoading.visibility = View.VISIBLE
+                    tvLoading.text = getString(R.string.viewer_error, error.description?.toString() ?: "WebView error")
+                    bottomBar.visibility = View.VISIBLE
                 }
             }
         }
 
         webView.loadUrl(VIEWER_URL)
-    }
-
-    private fun serveAsset(assetPath: String, mimeType: String): WebResourceResponse? {
-        return try {
-            val input = assets.open(assetPath)
-            WebResourceResponse(mimeType, "UTF-8", input)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load asset: $assetPath", e)
-            null
-        }
-    }
-
-    private fun serveEpub(): WebResourceResponse? {
-        return try {
-            WebResourceResponse(
-                "application/epub+zip",
-                null,
-                epubFile.inputStream()
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to open EPUB file", e)
-            null
-        }
     }
 
     inner class EpubJsInterface {
@@ -216,6 +229,7 @@ class EpubViewerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         epubLoaded = false
+        runCatching { if (::epubViewerDir.isInitialized) File(epubViewerDir, "book.epub").delete() }
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.destroy()
