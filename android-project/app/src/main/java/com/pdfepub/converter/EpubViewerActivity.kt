@@ -6,9 +6,9 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -20,6 +20,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import com.google.android.material.button.MaterialButton
+import org.json.JSONObject
 import java.io.File
 
 class EpubViewerActivity : AppCompatActivity() {
@@ -32,19 +33,21 @@ class EpubViewerActivity : AppCompatActivity() {
     private lateinit var tvPageInfo: TextView
     private lateinit var bottomBar: LinearLayout
 
-    private lateinit var epubFile: File
-    private lateinit var epubViewerDir: File
     private lateinit var assetLoader: WebViewAssetLoader
-    private var epubLoaded = false
+    private lateinit var stagedEpubFile: File
+    private var viewerBootstrapRequested = false
 
     companion object {
         const val EXTRA_EPUB_PATH = "epub_path"
         const val EXTRA_EPUB_TITLE = "epub_title"
 
         private const val TAG = "EpubViewerActivity"
-        private const val APP_ASSET_HOST = "appassets.androidplatform.net"
-        private val VIEWER_URL = "https://$APP_ASSET_HOST/assets/epub_viewer/index.html"
-        private val EPUB_URL = "https://$APP_ASSET_HOST/epub/book.epub"
+        private const val ASSET_VIEWER_URL =
+            "https://appassets.androidplatform.net/assets/epub_viewer/index.html"
+        private const val EPUB_URL =
+            "https://appassets.androidplatform.net/epub/book.epub"
+        private const val EPUB_CACHE_DIR_NAME = "epub_viewer"
+        private const val EPUB_FILE_NAME = "book.epub"
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -55,7 +58,10 @@ class EpubViewerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_epub_viewer)
 
-        val epubPath = intent.getStringExtra(EXTRA_EPUB_PATH) ?: run { finish(); return }
+        val epubPath = intent.getStringExtra(EXTRA_EPUB_PATH) ?: run {
+            finish()
+            return
+        }
         val epubTitle = intent.getStringExtra(EXTRA_EPUB_TITLE) ?: getString(R.string.viewer_title)
 
         supportActionBar?.title = epubTitle
@@ -69,80 +75,95 @@ class EpubViewerActivity : AppCompatActivity() {
         tvPageInfo = findViewById(R.id.tvPageInfo)
         bottomBar = findViewById(R.id.bottomBarViewer)
 
-        setupWebView(epubPath)
-
-        btnPrevChapter.setOnClickListener { webView.evaluateJavascript("prevPage()", null) }
-        btnNextChapter.setOnClickListener { webView.evaluateJavascript("nextPage()", null) }
-    }
-
-    private fun setupWebView(epubPath: String) {
-        epubFile = File(epubPath)
-        if (!epubFile.exists() || !epubFile.isFile) {
-            tvLoading.text = getString(R.string.viewer_error, "EPUB file not found")
-            progressBar.visibility = View.GONE
-            bottomBar.visibility = View.VISIBLE
-            return
-        }
-
-        // Stage the EPUB inside cacheDir so it can be safely exposed via HTTPS.
-        epubViewerDir = File(cacheDir, "epub_viewer").apply { mkdirs() }
-        val stagedEpub = File(epubViewerDir, "book.epub")
+        btnPrevChapter.isEnabled = false
+        btnNextChapter.isEnabled = false
+        tvLoading.visibility = View.VISIBLE
+        progressBar.visibility = View.VISIBLE
+        bottomBar.visibility = View.GONE
+        tvLoading.text = "Loading EPUB..."
 
         try {
-            epubFile.inputStream().use { input ->
-                stagedEpub.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
+            stagedEpubFile = stageEpubForWebView(epubPath)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to stage EPUB for preview", e)
-            tvLoading.text = getString(R.string.viewer_error, e.message ?: "Failed to prepare EPUB")
-            progressBar.visibility = View.GONE
-            bottomBar.visibility = View.VISIBLE
+            showError("Failed to prepare EPUB: ${e.localizedMessage ?: e.javaClass.simpleName}")
+            Log.e(TAG, "Failed to stage EPUB", e)
             return
         }
 
+        setupWebView()
+        loadViewerPage()
+        wireControls()
+    }
+
+    private fun stageEpubForWebView(sourcePath: String): File {
+        val sourceFile = File(sourcePath)
+        require(sourceFile.exists() && sourceFile.isFile) {
+            "EPUB file not found"
+        }
+
+        val targetDir = File(cacheDir, EPUB_CACHE_DIR_NAME)
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            throw IllegalStateException("Unable to create cache directory")
+        }
+
+        val targetFile = File(targetDir, EPUB_FILE_NAME)
+
+        val sourceCanonical = sourceFile.canonicalFile
+        val targetCanonical = targetFile.canonicalFile
+        if (sourceCanonical.path == targetCanonical.path && sourceCanonical.exists()) {
+            return sourceCanonical
+        }
+
+        sourceFile.inputStream().use { input ->
+            targetFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        return targetFile
+    }
+
+    private fun setupWebView() {
         assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
-            .addPathHandler("/epub/", WebViewAssetLoader.InternalStoragePathHandler(this, epubViewerDir))
+            .addPathHandler(
+                "/epub/",
+                WebViewAssetLoader.InternalStoragePathHandler(
+                    this,
+                    File(cacheDir, EPUB_CACHE_DIR_NAME)
+                )
+            )
             .build()
 
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
             cacheMode = WebSettings.LOAD_NO_CACHE
-            setSupportZoom(true)
-            builtInZoomControls = true
-            displayZoomControls = false
-            useWideViewPort = true
-            loadWithOverviewMode = true
 
-            // Use WebViewAssetLoader (HTTPS appassets) instead of file:// access.
             allowFileAccess = false
             allowContentAccess = false
             @Suppress("DEPRECATION")
             allowFileAccessFromFileURLs = false
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = false
+
+            setSupportZoom(true)
+            builtInZoomControls = true
+            displayZoomControls = false
+            useWideViewPort = true
+            loadWithOverviewMode = true
         }
 
-        webView.addJavascriptInterface(EpubJsInterface(), "AndroidBridge")
+        webView.addJavascriptInterface(EpubJsBridge(), "AndroidBridge")
 
         webView.webChromeClient = object : WebChromeClient() {
-            override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage): Boolean {
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                val level = consoleMessage.messageLevel().name
                 Log.d(
                     TAG,
-                    "JS:${consoleMessage.messageLevel()} ${consoleMessage.message()} (${consoleMessage.sourceId()}:${consoleMessage.lineNumber()})"
+                    "JS[$level] ${consoleMessage.message()} @ ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}"
                 )
-                return super.onConsoleMessage(consoleMessage)
-            }
-
-            override fun onProgressChanged(view: WebView, newProgress: Int) {
-                if (newProgress >= 100 && progressBar.visibility == View.VISIBLE) {
-                    progressBar.visibility = View.GONE
-                    tvLoading.visibility = View.GONE
-                    bottomBar.visibility = View.VISIBLE
-                }
+                return true
             }
         }
 
@@ -151,44 +172,63 @@ class EpubViewerActivity : AppCompatActivity() {
                 return false
             }
 
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+            override fun shouldInterceptRequest(
+                view: WebView,
+                request: WebResourceRequest
+            ): WebResourceResponse? {
                 return assetLoader.shouldInterceptRequest(request.url)
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                if (epubLoaded) return
-                epubLoaded = true
+                if (viewerBootstrapRequested) return
+                if (url != ASSET_VIEWER_URL) return
 
-                if (!stagedEpub.exists() || !stagedEpub.isFile) {
-                    tvLoading.text = getString(R.string.viewer_error, "Staged EPUB not found")
-                    progressBar.visibility = View.GONE
-                    bottomBar.visibility = View.VISIBLE
-                    return
-                }
+                viewerBootstrapRequested = true
 
                 view.post {
-                    view.evaluateJavascript("loadEpubFromUrl('$EPUB_URL')", null)
-                }
-            }
-
-            override fun onReceivedError(
-                view: WebView,
-                request: WebResourceRequest,
-                error: WebResourceError
-            ) {
-                if (request.isForMainFrame) {
-                    progressBar.visibility = View.GONE
-                    tvLoading.visibility = View.VISIBLE
-                    tvLoading.text = getString(R.string.viewer_error, error.description?.toString() ?: "WebView error")
-                    bottomBar.visibility = View.VISIBLE
+                    val jsUrl = JSONObject.quote(EPUB_URL)
+                    view.evaluateJavascript("loadEpubFromUrl($jsUrl)", null)
                 }
             }
         }
 
-        webView.loadUrl(VIEWER_URL)
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        webView.loadUrl(ASSET_VIEWER_URL)
     }
 
-    inner class EpubJsInterface {
+    private fun loadViewerPage() {
+        // Keep loading indicator visible until the JS side confirms the EPUB renderer is ready.
+        progressBar.visibility = View.VISIBLE
+        tvLoading.visibility = View.VISIBLE
+        bottomBar.visibility = View.GONE
+    }
+
+    private fun wireControls() {
+        btnPrevChapter.setOnClickListener {
+            webView.evaluateJavascript("prevPage()", null)
+        }
+        btnNextChapter.setOnClickListener {
+            webView.evaluateJavascript("nextPage()", null)
+        }
+    }
+
+    private fun showError(message: String) {
+        progressBar.visibility = View.GONE
+        bottomBar.visibility = View.GONE
+        tvLoading.visibility = View.VISIBLE
+        tvLoading.text = message
+    }
+
+    inner class EpubJsBridge {
+        @JavascriptInterface
+        fun onViewerReady() {
+            runOnUiThread {
+                progressBar.visibility = View.GONE
+                tvLoading.visibility = View.GONE
+                bottomBar.visibility = View.VISIBLE
+            }
+        }
+
         @JavascriptInterface
         fun onPageChanged(current: Int, total: Int) {
             runOnUiThread {
@@ -201,10 +241,7 @@ class EpubViewerActivity : AppCompatActivity() {
         @JavascriptInterface
         fun onError(msg: String) {
             runOnUiThread {
-                progressBar.visibility = View.GONE
-                tvLoading.visibility = View.VISIBLE
-                tvLoading.text = getString(R.string.viewer_error, msg)
-                bottomBar.visibility = View.VISIBLE
+                showError(getString(R.string.viewer_error, msg))
             }
         }
     }
@@ -216,9 +253,21 @@ class EpubViewerActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_font_smaller -> { webView.evaluateJavascript("changeFontSize(-2)", null); true }
-            R.id.action_font_larger -> { webView.evaluateJavascript("changeFontSize(2)", null); true }
-            R.id.action_night_mode -> { webView.evaluateJavascript("toggleNightMode()", null); true }
+            R.id.action_font_smaller -> {
+                webView.evaluateJavascript("changeFontSize(-2)", null)
+                true
+            }
+
+            R.id.action_font_larger -> {
+                webView.evaluateJavascript("changeFontSize(2)", null)
+                true
+            }
+
+            R.id.action_night_mode -> {
+                webView.evaluateJavascript("toggleNightMode()", null)
+                true
+            }
+
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -229,10 +278,9 @@ class EpubViewerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        epubLoaded = false
-        runCatching { if (::epubViewerDir.isInitialized) File(epubViewerDir, "book.epub").delete() }
         if (::webView.isInitialized) {
             webView.stopLoading()
+            webView.loadUrl("about:blank")
             webView.destroy()
         }
         super.onDestroy()
