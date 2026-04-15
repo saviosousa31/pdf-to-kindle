@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0">
+<base href="https://appassets.androidplatform.net/assets/epub_viewer/">
 <title>EPUB Viewer</title>
 <style>
   :root {
@@ -12,7 +13,8 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
-    width: 100%; height: 100%;
+    width: 100%;
+    height: 100%;
     background: var(--bg);
     color: var(--fg);
     font-family: Georgia, 'Times New Roman', serif;
@@ -27,7 +29,9 @@
     --bg: #121218;
     --fg: #e6e1e5;
   }
-  body.night #viewer { background: #121218; }
+  body.night #viewer {
+    background: #121218;
+  }
   #error-msg {
     display: none;
     padding: 20px;
@@ -50,58 +54,66 @@ var currentPage = 1;
 var nightMode = false;
 var fontSize = 100;
 
-window.addEventListener('error', function(e) {
-  showError('JS error: ' + (e.message || e.error || 'unknown error'));
+function reportError(msg) {
+  console.error(msg);
+  showError(msg);
+}
+
+window.addEventListener("error", function(event) {
+  reportError("JS error: " + (event.message || "unknown error"));
 });
 
-window.addEventListener('unhandledrejection', function(e) {
-  var reason = e && e.reason ? (e.reason.message || e.reason.toString()) : 'unknown rejection';
-  showError('JS promise error: ' + reason);
+window.addEventListener("unhandledrejection", function(event) {
+  var reason = event && event.reason ? (event.reason.message || event.reason.toString()) : "unknown rejection";
+  reportError("JS promise error: " + reason);
 });
 
 function loadEpubFromUrl(epubUrl) {
   try {
     if (!epubUrl) {
-      showError('Missing EPUB URL');
+      showError("Missing EPUB URL");
       return;
     }
 
-    if (typeof ePub !== 'function') {
-      showError('epub.js not loaded');
+    if (typeof ePub !== "function") {
+      showError("epub.js not loaded");
       return;
     }
 
     book = ePub(epubUrl);
-    rendition = book.renderTo('viewer', {
-      width: '100%',
-      height: '100%',
-      spread: 'none',
-      flow: 'paginated'
+    rendition = book.renderTo("viewer", {
+      width: "100%",
+      height: "100%",
+      spread: "none",
+      flow: "paginated"
     });
 
     rendition.display().then(function() {
+      if (window.AndroidBridge && AndroidBridge.onViewerReady) {
+        AndroidBridge.onViewerReady();
+      }
       return book.locations.generate(1024);
     }).then(function(locations) {
       totalLocations = (locations && locations.length) ? locations.length : 1;
       notifyPageChanged();
       applyTheme();
       if (fontSize !== 100) {
-        rendition.themes.fontSize(fontSize + '%');
+        rendition.themes.fontSize(fontSize + "%");
       }
     }).catch(function(e) {
-      showError('Render error: ' + (e && e.message ? e.message : e));
+      showError("Render error: " + (e.message || e));
     });
 
-    rendition.on('relocated', function() {
+    rendition.on("relocated", function() {
       notifyPageChanged();
     });
 
-    rendition.on('keyup', function(e) {
+    rendition.on("keyup", function(e) {
       if (e.keyCode === 37) prevPage();
       if (e.keyCode === 39) nextPage();
     });
   } catch (e) {
-    showError('Load error: ' + (e.message || e));
+    showError("Load error: " + (e.message || e));
   }
 }
 
@@ -111,57 +123,64 @@ function notifyPageChanged() {
     var loc = rendition.currentLocation();
     if (loc && loc.start) {
       var pct = book.locations.percentageFromCfi(loc.start.cfi);
-      if (typeof pct === 'number' && isFinite(pct)) {
-        currentPage = Math.max(1, Math.round(pct * totalLocations) + 1);
-      }
+      currentPage = Math.max(1, Math.round(pct * totalLocations) + 1);
     }
     if (window.AndroidBridge) {
       AndroidBridge.onPageChanged(currentPage, Math.max(totalLocations, 1));
     }
-  } catch(e) {}
+  } catch (e) {}
 }
 
 function prevPage() {
-  if (rendition) rendition.prev().then(notifyPageChanged);
+  if (rendition) {
+    rendition.prev().then(notifyPageChanged);
+  }
 }
 
 function nextPage() {
-  if (rendition) rendition.next().then(notifyPageChanged);
+  if (rendition) {
+    rendition.next().then(notifyPageChanged);
+  }
 }
 
 function changeFontSize(delta) {
   fontSize = Math.max(60, Math.min(200, fontSize + delta));
-  if (rendition) rendition.themes.fontSize(fontSize + '%');
+  if (rendition) {
+    rendition.themes.fontSize(fontSize + "%");
+  }
 }
 
 function toggleNightMode() {
   nightMode = !nightMode;
-  document.body.classList.toggle('night', nightMode);
+  document.body.classList.toggle("night", nightMode);
   applyTheme();
 }
 
 function applyTheme() {
   if (!rendition) return;
+
   if (nightMode) {
-    rendition.themes.register('night', {
-      'body': { 'background': '#121218 !important', 'color': '#e6e1e5 !important' },
-      'p': { 'color': '#e6e1e5 !important' }
+    rendition.themes.register("night", {
+      "body": { "background": "#121218 !important", "color": "#e6e1e5 !important" },
+      "p": { "color": "#e6e1e5 !important" }
     });
-    rendition.themes.select('night');
+    rendition.themes.select("night");
   } else {
-    rendition.themes.register('day', {
-      'body': { 'background': '#f8f9ff !important', 'color': '#1c1b1f !important' },
-      'p': { 'color': '#1c1b1f !important' }
+    rendition.themes.register("day", {
+      "body": { "background": "#f8f9ff !important", "color": "#1c1b1f !important" },
+      "p": { "color": "#1c1b1f !important" }
     });
-    rendition.themes.select('day');
+    rendition.themes.select("day");
   }
 }
 
 function showError(msg) {
-  var el = document.getElementById('error-msg');
-  el.style.display = 'block';
+  var el = document.getElementById("error-msg");
+  el.style.display = "block";
   el.textContent = msg;
-  if (window.AndroidBridge) AndroidBridge.onError(msg);
+  if (window.AndroidBridge && AndroidBridge.onError) {
+    AndroidBridge.onError(msg);
+  }
 }
 </script>
 </body>
