@@ -53,7 +53,6 @@ object CoverSearcher {
             for (asin in asins.take(10)) {
                 // CDN direct — most reliable
                 urls += "https://m.media-amazon.com/images/P/$asin.01._SCLZZZZZZZ_SX600_.jpg"
-                urls += "https://images-na.ssl-images-amazon.com/images/P/$asin.01.LZZZZZZZ.jpg"
             }
 
             // Also extract any media-amazon image IDs from the search page
@@ -107,7 +106,6 @@ object CoverSearcher {
         while (m.find()) {
             val id = m.group(1)!!
             urls += "https://covers.openlibrary.org/b/id/$id-L.jpg"
-            urls += "https://covers.openlibrary.org/b/id/$id-M.jpg"
         }
         return urls
     }

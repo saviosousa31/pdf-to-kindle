@@ -63,11 +63,18 @@ class CoverAdapter(
 
             applySelectedStyle(selected)
 
+            val fallbackUrl = url
+                .replace("m.media-amazon.com/images/P/", "images-na.ssl-images-amazon.com/images/P/")
+                .replace("._SCLZZZZZZZ_SX600_", ".LZZZZZZZ")
+
             Glide.with(image.context).load(url)
                 .apply(RequestOptions()
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .override(300, 450)
                     .centerCrop())
+                .error(
+                    Glide.with(image.context).load(fallbackUrl)
+                )
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?,
                         target: Target<Drawable>, isFirstResource: Boolean): Boolean {
