@@ -208,6 +208,7 @@ class MainActivity : AppCompatActivity() {
 
         cacheDir.listFiles()?.filter { it.name.startsWith("epub_") }?.forEach { it.delete() }
         updateUI()
+        btnConvert.isEnabled        = true
     }
 
     private fun handleGalleryImageSelected(uri: Uri) {
