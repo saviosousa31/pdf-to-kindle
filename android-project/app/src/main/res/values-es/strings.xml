@@ -117,4 +117,5 @@
     <string name="help_authorize_sender_title_icon">✅  Cómo autorizar al remitente</string>
     <string name="help_apppassword_title_icon">🔑  Cómo crear una Contraseña de App de Gmail</string>
     <string name="test_connection_fail">No se pudo conectar.\nVerifica host, puerto y conexión.\n\nDetalle: %1$s</string>
+    <string name="btn_view_epub">👁  Ver EPUB</string>
 </resources>

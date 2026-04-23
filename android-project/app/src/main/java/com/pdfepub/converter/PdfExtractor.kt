@@ -40,10 +40,37 @@ object PdfExtractor {
         pages
     }
 
+    private fun removeRepeatingFooters(pages: List<PdfPage>): List<PdfPage> {
+        if (pages.size < 4) return pages
+
+        // Coleta a última linha não-vazia de cada página
+        val lastLines = pages.map { page ->
+            page.text.lines().lastOrNull { it.isNotBlank() }?.trim() ?: ""
+        }
+
+        // Considera rodapé qualquer linha que apareça em mais de 40% das páginas
+        val freq = lastLines.filter { it.isNotBlank() }.groupingBy { it }.eachCount()
+        val threshold = pages.size * 0.40
+        val footers = freq.filter { it.value >= threshold }.keys
+
+        if (footers.isEmpty()) return pages
+
+        // Remove as linhas de rodapé do início e fim de cada página
+        return pages.map { page ->
+            val lines = page.text.lines().toMutableList()
+            while (lines.isNotEmpty() && lines.last().trim() in footers)
+                lines.removeLast()
+            while (lines.isNotEmpty() && lines.first().trim() in footers)
+                lines.removeFirst()
+            PdfPage(page.number, lines.joinToString("\n").trim())
+        }
+    }
+
     fun groupIntoChapters(pages: List<PdfPage>, pagesPerChapter: Int = 10): List<PdfChapter> {
+        val cleanPages = removeRepeatingFooters(pages)  // ← adicione esta linha
         val chapters = mutableListOf<PdfChapter>()
-        for (i in pages.indices step pagesPerChapter) {
-            val chunk = pages.subList(i, minOf(i + pagesPerChapter, pages.size))
+        for (i in cleanPages.indices step pagesPerChapter) {   // ← troque pages por cleanPages
+            val chunk = cleanPages.subList(i, minOf(i + pagesPerChapter, cleanPages.size))  // ← aqui também
             val start = chunk.first().number
             val end   = chunk.last().number
             val title = if (chunk.size > 1) "Páginas $start–$end" else "Página $start"
