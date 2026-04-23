@@ -18,20 +18,151 @@ import java.util.zip.ZipOutputStream
 
 object EpubBuilder {
 
-    private fun esc(s: String) = s
-        .replace("&", "&amp;").replace("<", "&lt;")
-        .replace(">", "&gt;").replace("\"", "&quot;")
+    private fun sanitizeXmlChars(input: String): String {
+        val out = StringBuilder(input.length)
+        for (ch in input) {
+            val code = ch.code
+            val isValidXmlChar =
+                ch == '\t' || ch == '\n' || ch == '\r' ||
+                        code in 0x20..0xD7FF ||
+                        code in 0xE000..0xFFFD
+
+            if (isValidXmlChar) out.append(ch)
+        }
+        return out.toString()
+    }
+
+    private fun esc(s: String) = sanitizeXmlChars(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&apos;")
 
     private fun textToXhtml(text: String): String {
-        // \n simples = quebra de linha visual do PDF → vira espaço (une as palavras)
-        // \n\n ou mais = quebra de parágrafo real → vira <p>
-        val normalized = text.trim()
-            .replace(Regex("(?<!\n)\n(?!\n)"), " ")  // single \n → espaço
-            .replace(Regex(" {2,}"), " ")             // remove espaços duplos
-        val paras = normalized.split(Regex("\n{2,}"))
-        return paras.filter { it.isNotBlank() }.joinToString("\n") {
-            "<p>${esc(it.trim())}</p>"
-        }.ifBlank { "<p><em>(Página sem texto detectável)</em></p>" }
+        val lines = sanitizeXmlChars(text)
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .split('\n')
+            .map { it.trimEnd() }
+
+        if (lines.none { it.isNotBlank() }) {
+            return "<p><em>(Página sem texto detectável)</em></p>"
+        }
+
+        fun isTableLike(line: String): Boolean {
+            val t = line.trim()
+            if (t.isBlank()) return false
+            if (t.length > 160) return false
+
+            val hasDotLeader = Regex("""\.{3,}""").containsMatchIn(t)
+            val hasManySpaces = Regex("""\s{2,}""").containsMatchIn(t)
+            val endsWithNumber = Regex("""\d+\s*(?:days?|‘)?$""", RegexOption.IGNORE_CASE).containsMatchIn(t)
+
+            return hasDotLeader || (hasManySpaces && endsWithNumber)
+        }
+
+        fun startsNewDialogueParagraph(next: String): Boolean {
+            val t = next.trimStart()
+            if (t.isBlank()) return false
+            return t.startsWith("‘") || t.startsWith("“") || t.startsWith("\"") || t.startsWith("'")
+        }
+
+        fun joinProseLines(lines: List<String>): String {
+            val out = StringBuilder()
+
+            for (raw in lines) {
+                val line = raw.trim()
+                if (line.isBlank()) continue
+
+                if (out.isEmpty()) {
+                    out.append(line)
+                } else {
+                    if (out.last() == '-') {
+                        out.setLength(out.length - 1)
+                        out.append(line.trimStart())
+                    } else {
+                        out.append(' ')
+                        out.append(line)
+                    }
+                }
+            }
+
+            return out.toString().trim()
+        }
+
+        val blocks = mutableListOf<String>()
+        val proseLines = mutableListOf<String>()
+        val tableLines = mutableListOf<String>()
+
+        fun flushProse() {
+            if (proseLines.isEmpty()) return
+
+            val paragraph = joinProseLines(proseLines)
+            if (paragraph.isNotBlank()) {
+                blocks += "<p>${esc(paragraph)}</p>"
+            }
+            proseLines.clear()
+        }
+
+        fun flushTable() {
+            if (tableLines.isEmpty()) return
+
+            blocks += """
+            <div class="pdf-pre">${tableLines.joinToString("<br/>\n") { esc(it.trim()) }}</div>
+        """.trimIndent()
+
+            tableLines.clear()
+        }
+
+        for (rawLine in lines) {
+            val line = rawLine.trim()
+
+            if (line.isBlank()) {
+                flushProse()
+                flushTable()
+                continue
+            }
+
+            if (isTableLike(line)) {
+                flushProse()
+                tableLines += line
+                continue
+            }
+
+            if (tableLines.isNotEmpty()) {
+                flushTable()
+            }
+
+            if (proseLines.isEmpty()) {
+                proseLines += line
+                continue
+            }
+
+            val prev = proseLines.last()
+            val hardBreak = prev.trimEnd().endsWithAny('.', '!', '?', '’', '”') &&
+                    startsNewDialogueParagraph(line)
+
+            if (hardBreak) {
+                flushProse()
+                proseLines += line
+            } else {
+                proseLines += line
+            }
+        }
+
+        flushProse()
+        flushTable()
+
+        return blocks.joinToString("\n").ifBlank {
+            "<p><em>(Página sem texto detectável)</em></p>"
+        }
+    }
+
+    private fun String.endsWithAny(vararg chars: Char): Boolean {
+        val t = this.trimEnd()
+        val last = t.lastOrNull() ?: return false
+        return chars.contains(last)
     }
 
     /**
@@ -112,7 +243,9 @@ body.cover-page{margin:0;padding:0;}
 .cover-img{max-width:100%;max-height:100%;display:block;margin:0 auto;}
 .chapter{margin:1.5em 1.3em;}
 .chapter-title{font-size:1.35em;font-weight:bold;border-bottom:2px solid #333;padding-bottom:.3em;margin-bottom:1em;color:#111;}
-p{margin:.55em 0;text-align:justify;text-indent:1.3em;}p:first-of-type{text-indent:0;}"""
+p{margin:.55em 0;text-align:justify;text-indent:1.3em;}
+p:first-of-type{text-indent:0;}
+.pdf-pre{margin:.35em 0;text-align:left;text-indent:0;white-space:pre-wrap;line-height:1.35;}"""
 
         val coverXhtml = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -183,18 +316,45 @@ ${textToXhtml(ch.text)}
 
         // Fallback: Downloads padrão
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val cv = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, filename)
-                put(MediaStore.Downloads.MIME_TYPE, "application/epub+zip")
-                put(MediaStore.Downloads.IS_PENDING, 1)
+
+            // Verifica se já existe um arquivo com o mesmo nome
+            val existingUri = context.contentResolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Downloads._ID),
+                "${MediaStore.Downloads.DISPLAY_NAME} = ?",
+                arrayOf(filename),
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    android.content.ContentUris.withAppendedId(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                        cursor.getLong(0)
+                    )
+                } else null
             }
-            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
-                ?: throw Exception("Falha ao criar arquivo em Downloads")
-            context.contentResolver.openOutputStream(uri)?.use { out ->
+
+            val uri = if (existingUri != null) {
+                // Sobrescreve o existente
+                existingUri
+            } else {
+                val cv = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, filename)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/epub+zip")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
+                    ?: throw Exception("Falha ao criar arquivo em Downloads")
+            }
+
+            context.contentResolver.openOutputStream(uri, "wt")?.use { out ->
                 cacheFile.inputStream().use { it.copyTo(out) }
             }
-            cv.clear(); cv.put(MediaStore.Downloads.IS_PENDING, 0)
-            context.contentResolver.update(uri, cv, null, null)
+
+            if (existingUri == null) {
+                val cv = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
+                context.contentResolver.update(uri, cv, null, null)
+            }
+
             uri
         } else {
             @Suppress("DEPRECATION")
