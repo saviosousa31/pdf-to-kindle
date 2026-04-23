@@ -42,6 +42,12 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ReaderActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PdfEpub"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".FullscreenGifActivity"
             android:exported="false"
             android:theme="@style/Theme.PdfEpub.Help"

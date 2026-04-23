@@ -57,8 +57,8 @@ class CoverAdapter(
 
         fun bind(url: String) {
             val selected = (url == selectedUrl)
-            itemView.visibility = View.VISIBLE
-            itemView.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            itemView.visibility = View.GONE          // começa invisível
+            itemView.layoutParams.width = 0
             itemView.requestLayout()
 
             applySelectedStyle(selected)
@@ -84,9 +84,11 @@ class CoverAdapter(
                         return true
                     }
                     override fun onResourceReady(resource: Drawable, model: Any,
-                        target: Target<Drawable>?, dataSource: DataSource,
-                        isFirstResource: Boolean): Boolean {
+                                                 target: Target<Drawable>?, dataSource: DataSource,
+                                                 isFirstResource: Boolean): Boolean {
                         itemView.visibility = View.VISIBLE
+                        itemView.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT  // ← adicione esta linha
+                        itemView.requestLayout()                                             // ← e esta
                         return false
                     }
                 }).into(image)

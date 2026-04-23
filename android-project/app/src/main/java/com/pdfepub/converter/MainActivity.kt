@@ -59,6 +59,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvProgress         : TextView
     private lateinit var cardResult         : MaterialCardView
     private lateinit var tvResult           : TextView
+
+    private lateinit var btnViewEpub        : MaterialButton
     private lateinit var btnDownload        : MaterialButton
     private lateinit var btnEmail           : MaterialButton
     private lateinit var btnNew             : MaterialButton
@@ -107,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         tvProgress          = findViewById(R.id.tvProgress)
         cardResult          = findViewById(R.id.cardResult)
         tvResult            = findViewById(R.id.tvResult)
+        btnViewEpub         = findViewById(R.id.btnViewEpub)
         btnDownload         = findViewById(R.id.btnDownload)
         btnEmail            = findViewById(R.id.btnEmail)
         btnNew              = findViewById(R.id.btnNew)
@@ -119,7 +122,16 @@ class MainActivity : AppCompatActivity() {
                 selectedCoverUrl = url
                 if (localCoverBytes != null) clearLocalCover(keepConvert = true)
                 btnConvert.text = getString(R.string.btn_convert_has_cover)
-                cardResult.visibility = View.GONE
+                btnConvert.isEnabled = true
+                // Se já havia um EPUB convertido, descarta e volta ao botão de converter
+                // para que o usuário possa reconverter com a nova capa
+                if (epubCacheFile != null) {
+                    epubCacheFile = null
+                    cardResult.visibility = View.GONE
+                    cardConvert.visibility = View.VISIBLE
+                    progressConvert.visibility = View.GONE
+                    tvProgress.visibility = View.GONE
+                }
                 cardConvert.post { mainScrollView.smoothScrollTo(0, cardConvert.bottom) }
             },
             onDeselected = {
@@ -150,6 +162,7 @@ class MainActivity : AppCompatActivity() {
         btnSearchCover.setOnClickListener      { searchCovers() }
         btnLoadMore.setOnClickListener         { showMoreCovers() }
         btnConvert.setOnClickListener          { startConversion() }
+        btnViewEpub.setOnClickListener         { openEpubReader() }
         btnDownload.setOnClickListener         { downloadEpub() }
         btnEmail.setOnClickListener            { sendEmail() }
         btnNew.setOnClickListener              { resetAll() }
@@ -367,6 +380,15 @@ class MainActivity : AppCompatActivity() {
                 DialogHelper.error(this@MainActivity, getString(R.string.conversion_error, e.message ?: ""))
             }
         }
+    }
+
+    private fun openEpubReader() {
+        val f = epubCacheFile ?: run {
+            DialogHelper.error(this, getString(R.string.error_file_not_found)); return
+        }
+        val intent = Intent(this, ReaderActivity::class.java)
+        intent.putExtra(ReaderActivity.EXTRA_EPUB_PATH, f.absolutePath)
+        startActivity(intent)
     }
 
     private fun downloadEpub() {

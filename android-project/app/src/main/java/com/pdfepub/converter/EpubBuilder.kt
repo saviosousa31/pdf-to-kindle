@@ -23,9 +23,14 @@ object EpubBuilder {
         .replace(">", "&gt;").replace("\"", "&quot;")
 
     private fun textToXhtml(text: String): String {
-        val paras = text.trim().split(Regex("\n{2,}"))
+        // \n simples = quebra de linha visual do PDF → vira espaço (une as palavras)
+        // \n\n ou mais = quebra de parágrafo real → vira <p>
+        val normalized = text.trim()
+            .replace(Regex("(?<!\n)\n(?!\n)"), " ")  // single \n → espaço
+            .replace(Regex(" {2,}"), " ")             // remove espaços duplos
+        val paras = normalized.split(Regex("\n{2,}"))
         return paras.filter { it.isNotBlank() }.joinToString("\n") {
-            "<p>${esc(it.trim().replace("\n", " "))}</p>"
+            "<p>${esc(it.trim())}</p>"
         }.ifBlank { "<p><em>(Página sem texto detectável)</em></p>" }
     }
 
