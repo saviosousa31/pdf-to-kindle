@@ -13,6 +13,10 @@ import kotlin.math.ceil
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink
 import com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionGoTo
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPageDestination
+import com.tom_roush.pdfbox.cos.COSBase
+import com.tom_roush.pdfbox.text.PDFTextStripperByArea
+import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
+import android.graphics.RectF
 
 data class PdfPage(val number: Int, val text: String)
 data class PdfChapter(val title: String, val text: String)
@@ -58,16 +62,19 @@ object PdfExtractor {
 
         val cleanPages = removeRepeatingFooters(pages)
 
+        // Detecta páginas de índice para excluí-las das estratégias de texto
+        val tocPageNums = detectTocPageNums(cleanPages)
+
         var chapters = tryTocLinks(context, uri, cleanPages)
 
         if (chapters.size < 2)
             chapters = tryOutlines(context, uri, cleanPages)
 
         if (chapters.size < 2)
-            chapters = tryKeywordRegex(cleanPages)
+            chapters = tryKeywordRegex(cleanPages, tocPageNums)
 
         if (chapters.size < 2)
-            chapters = tryHeuristic(cleanPages)
+            chapters = tryHeuristic(cleanPages, tocPageNums)
 
         if (chapters.size < 2)
             chapters = fallbackChunks(cleanPages, pagesPerChapter)
@@ -85,12 +92,19 @@ object PdfExtractor {
         if (pages.isEmpty()) return emptyList()
 
         val searchUpTo = minOf(40, maxOf(5, (pages.size * 0.20).toInt()))
-        val allAccumulatedBreaks = mutableListOf<Pair<String, Int>>()
+        val allBreaks = mutableListOf<Pair<String, Int>>()
 
         try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 val doc = PDDocument.load(stream)
                 val totalPages = doc.numberOfPages
+
+                // Mapa COSObject → número de página (resolve o problema de comparação por identidade)
+                val cosPageMap = HashMap<COSBase, Int>()
+                for (i in 0 until totalPages) {
+                    cosPageMap[doc.getPage(i).cosObject] = i + 1
+                }
+
                 var insideToc = false
 
                 for (pageIdx in 0 until minOf(searchUpTo, totalPages)) {
@@ -102,16 +116,8 @@ object PdfExtractor {
                         continue
                     }
 
-                    val stripper = PDFTextStripper()
-                    stripper.startPage = pageIdx + 1
-                    stripper.endPage   = pageIdx + 1
-                    val tocLines = try {
-                        stripper.getText(doc).lines()
-                            .map { it.trim() }
-                            .filter { it.isNotBlank() }
-                    } catch (_: Exception) { emptyList() }
-
-                    val currentPageBreaks = mutableListOf<Pair<String, Int>>()
+                    // Coleta links que apontam para frente, com posição Y (para ordenação)
+                    val forwardLinks = mutableListOf<Pair<PDRectangle, Int>>() // (rect, destPage 1-based)
 
                     for (ann in annotations) {
                         val link = ann as? PDAnnotationLink ?: continue
@@ -119,58 +125,92 @@ object PdfExtractor {
                             link.destination ?: (link.action as? PDActionGoTo)?.destination
                         } catch (_: Exception) { null } ?: continue
 
-                        val targetPageNum = try {
+                        val targetPageNum: Int? = try {
                             val pd = dest as? PDPageDestination ?: continue
                             val pg = pd.page
-                            if (pg != null) doc.pages.indexOf(pg) + 1 else pd.pageNumber + 1
-                        } catch (_: Exception) { null } ?: continue
-
-                        if (targetPageNum in 1..totalPages) {
-                            // --- BUSCA DE TÍTULO NO ÍNDICE (PRIORIDADE 1) ---
-                            // Procura uma linha que contenha o número da página no final
-                            var title = tocLines.find { it.matches(Regex(".*\\b$targetPageNum$")) }
-                                ?.replace(Regex("\\s*\\d+$"), "") // Remove o número no fim
-                                ?.trimEnd('.', ' ', '·', '•', '-', '–', '—') ?: ""
-
-                            // --- FALLBACK NA PÁGINA DE DESTINO (PRIORIDADE 2) ---
-                            if (title.isBlank() || title.equals("Chapter", ignoreCase = true)) {
-                                val targetPage = pages.find { it.number == targetPageNum }
-                                val targetLines = targetPage?.text?.lines()
-                                    ?.map { it.trim() }
-                                    ?.filter { it.isNotBlank() } ?: emptyList()
-
-                                if (targetLines.isNotEmpty()) {
-                                    val firstLine = targetLines.first()
-
-                                    // Se a primeira linha for só "Chapter", mas a segunda tiver "Prologue" ou "Chapter 1"
-                                    if (firstLine.equals("Chapter", ignoreCase = true) && targetLines.size > 1) {
-                                        val secondLine = targetLines[1]
-                                        // Só pega a segunda linha se ela parecer um título (curta e sem pontuação de frase)
-                                        title = if (secondLine.length < 50 && !secondLine.contains(".")) {
-                                            secondLine
-                                        } else {
-                                            // Se a segunda linha já é a história, tenta achar palavras-chave na primeira linha da história
-                                            val keywordMatch = Regex("(?i)^(PROLOGUE|PREFACE|INTRODUCTION|EPILOGUE)").find(secondLine)
-                                            keywordMatch?.value ?: "Chapter $targetPageNum"
-                                        }
-                                    } else {
-                                        title = firstLine
-                                    }
+                            if (pg != null) {
+                                val idx = doc.pages.indexOf(pg)
+                                if (idx >= 0) {
+                                    idx + 1
+                                } else {
+                                    // Fallback via COSObject (corrige falha com referências diretas de página)
+                                    cosPageMap[pg.cosObject]
+                                        ?: let { val pn = pd.pageNumber; if (pn >= 0) pn + 1 else null }
                                 }
+                            } else {
+                                val pn = pd.pageNumber
+                                if (pn >= 0) pn + 1 else null
                             }
+                        } catch (_: Exception) { null }
 
-                            // Limpeza final: se o título ainda for só "Chapter", põe o número para não ficar repetido
-                            if (title.equals("Chapter", ignoreCase = true)) {
-                                title = "Chapter $targetPageNum"
-                            }
-
-                            currentPageBreaks.add(Pair(title.take(100), targetPageNum))
+                        if (targetPageNum != null && targetPageNum in 1..totalPages) {
+                            val rect = try { link.rectangle } catch (_: Exception) { null } ?: continue
+                            forwardLinks.add(Pair(rect, targetPageNum))
                         }
                     }
 
-                    if (currentPageBreaks.isNotEmpty()) {
+                    if (forwardLinks.isEmpty()) {
+                        if (insideToc) break
+                        continue
+                    }
+
+                    // Ordena de cima para baixo (Y maior = mais alto na página em coordenadas PDF)
+                    val sortedLinks = forwardLinks.sortedByDescending { it.first.lowerLeftY }
+
+                    // Extrai o texto de cada link pela sua área exata na página
+                    val pageHeight = try { pdPage.mediaBox.height } catch (_: Exception) { 842f }
+                    val areaStripper = PDFTextStripperByArea()
+
+                    sortedLinks.forEachIndexed { i, (rect, _) ->
+                        // Calcula o Y invertido (pois o PDF começa de baixo pra cima, e a tela de cima pra baixo)
+                        val java2dY = pageHeight - rect.upperRightY
+
+                        // Mapeia os valores para o formato do Android
+                        val leftExpand = 6f
+                        val left   = (rect.lowerLeftX - leftExpand).coerceAtLeast(0f)
+                        val top    = java2dY
+                        val right  = left + rect.width + leftExpand
+                        val bottom = top + rect.height
+
+                        areaStripper.addRegion(
+                            "link_$i",
+                            RectF(left, top, right, bottom)
+                        )
+                    }
+                    try { areaStripper.extractRegions(pdPage) } catch (_: Exception) { }
+
+                    val currentBreaks = mutableListOf<Pair<String, Int>>()
+                    sortedLinks.forEachIndexed { i, (linkRect, targetPageNum) ->
+                        val rawText = try {
+                            areaStripper.getTextForRegion("link_$i") ?: ""
+                        } catch (_: Exception) { "" }
+                        val rawLine = rawText.trim()
+                            .replace(Regex("""\r?\n"""), " ")
+                            .replace(Regex("""\t+"""), " ")
+                            .replace(Regex("""\s+"""), " ")
+
+                        // Se a área retornou texto válido, usa direto
+                        // Caso contrário, tenta encontrar a linha correspondente no texto da página pelo Y
+                        val areaTitle = cleanTocEntryTitle(rawLine)
+
+                        val title = if (areaTitle.isNotBlank()) {
+                            areaTitle
+                        } else {
+                            findClosestLineByY(
+                                pageText = pages.getOrNull(pageIdx)?.text ?: "",
+                                linkCenterY = linkRect.lowerLeftY + linkRect.height / 2f,
+                                pageHeight = pageHeight
+                            )
+                        }
+
+                        if (title.isNotBlank() && title.length <= 150) {
+                            currentBreaks.add(Pair(title, targetPageNum))
+                        }
+                    }
+
+                    if (currentBreaks.isNotEmpty()) {
                         insideToc = true
-                        allAccumulatedBreaks.addAll(currentPageBreaks)
+                        allBreaks.addAll(currentBreaks)
                     } else if (insideToc) {
                         break
                     }
@@ -179,14 +219,160 @@ object PdfExtractor {
             }
         } catch (_: Exception) {}
 
-        return if (allAccumulatedBreaks.isNotEmpty()) {
-            allAccumulatedBreaks
-                .sortedBy { it.second }
-                .distinctBy { it.second }
-                .let { buildChaptersFromBreaks(it, pages) }
-        } else {
-            emptyList()
+        if (allBreaks.size < 2) return emptyList()
+
+        return allBreaks
+            .sortedBy { it.second }
+            .let { buildChaptersFromBreaks(it, pages) }
+    }
+
+    /**
+     * Encontra a linha de texto da página mais próxima de um Y de referência (coordenada PDF,
+     * ou seja, Y cresce de baixo para cima). Usa distância relativa ao centro vertical da página
+     * para escolher a linha mais provável correspondente ao link.
+     *
+     * Como o PDFBox extrai o texto de cima para baixo, a linha no índice 0 é a do topo da página.
+     * Convertemos a posição Y do link para uma fração relativa (0.0 = topo, 1.0 = base) e
+     * escolhemos a linha no índice correspondente à mesma fração.
+     *
+     * @param pageText    Texto completo da página (extraído normalmente via PDFTextStripper)
+     * @param linkCenterY Centro Y do link em coordenadas PDF (Y = 0 na base)
+     * @param pageHeight  Altura total da página em pontos PDF
+     */
+    private fun findClosestLineByY(
+        pageText: String,
+        linkCenterY: Float,
+        pageHeight: Float
+    ): String {
+        val lines = pageText.lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+        if (lines.isEmpty()) return ""
+
+        // Converte Y do PDF (base=0) para fração relativa ao topo (0.0=topo, 1.0=base)
+        val yFraction = 1f - (linkCenterY / pageHeight).coerceIn(0f, 1f)
+
+        // Estima o índice da linha com base na fração
+        val estimatedIndex = (yFraction * lines.size).toInt().coerceIn(0, lines.lastIndex)
+
+        // Busca na vizinhança (±3 linhas) a linha que melhor parece um título de TOC
+        val searchRange = (estimatedIndex - 3).coerceAtLeast(0)..(estimatedIndex + 3).coerceAtMost(lines.lastIndex)
+
+        // Prefere a linha mais curta na vizinhança (títulos de TOC são curtos)
+        val candidate = searchRange
+            .map { lines[it] }
+            .filter { it.length in 2..150 }
+            .minByOrNull { it.length }
+            ?: lines[estimatedIndex]
+
+        return cleanTocEntryTitle(candidate)
+    }
+
+    /**
+     * Mescla entradas do TOC que apontam para a mesma página.
+     * Regra: mantém o PRIMEIRO título (nível mais alto, ex: "PART 1"),
+     * descartando os demais que redirecionam para a mesma página.
+     *
+     * Isso evita que entradas como "PART 1" (range vazio → body vazio)
+     * sejam descartadas em buildChaptersFromBreaks, perdendo o título correto.
+     */
+    private fun mergeBreaksBySamePage(
+        breaks: List<Pair<String, Int>>
+    ): List<Pair<String, Int>> {
+        if (breaks.isEmpty()) return breaks
+        val result = mutableListOf<Pair<String, Int>>()
+        var current = breaks[0]
+        for (i in 1 until breaks.size) {
+            val next = breaks[i]
+            if (next.second == current.second) {
+                // Mesma página: mantém o primeiro (nível mais alto)
+                // Se quiser combinar os títulos, use:
+                // current = Pair("${current.first} – ${next.first}", current.second)
+                // Por padrão, apenas descartamos o segundo:
+                continue
+            }
+            result.add(current)
+            current = next
         }
+        result.add(current)
+        return result
+    }
+
+    /**
+     * Detecta páginas de índice/sumário nos primeiros 10% do livro.
+     * Critério: página onde ≥50% das linhas e pelo menos 5 linhas são títulos de capítulo puros.
+     */
+    private fun detectTocPageNums(pages: List<PdfPage>): Set<Int> {
+        val searchUpTo = minOf(15, maxOf(3, (pages.size * 0.10).toInt()))
+        val result = mutableSetOf<Int>()
+
+        val pureChapterLine = Regex(
+            """(?i)^(chapter|ch\.?|part|section|prologue|epilogue|preface|introduction|appendix|""" +
+                    """capítulo|chapitre|kapitel|capitolo|prologo|epilogo|préface|vorwort|einleitung|prefazione)""" +
+                    """\s*[\dIVXLCDM]{0,6}\s*$"""
+        )
+
+        for (i in 0 until minOf(searchUpTo, pages.size)) {
+            val lines = pages[i].text.lines()
+                .map { it.trim().replace(Regex("""\t+"""), " ").replace(Regex("""\s+"""), " ") }
+                .filter { it.isNotBlank() }
+
+            if (lines.size < 5) continue
+
+            val chapterLineCount = lines.count { pureChapterLine.matches(it) }
+
+            if (chapterLineCount >= 5 && chapterLineCount.toFloat() / lines.size >= 0.50f) {
+                result.add(pages[i].number)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Remove o número de página e os pontos-guia do final de uma linha de índice,
+     * retornando apenas o título limpo.
+     */
+    private fun cleanTocEntryTitle(line: String): String {
+        return line
+            .replace(Regex("""[·.•\-]{2,}\s*\d{1,4}\s*$"""), "") // "Título ....... 42" → "Título"
+            .replace(Regex("""\s{2,}\d{1,4}\s*$"""), "")          // "Título    42" → "Título"
+            .trim()
+    }
+
+    private fun resolveOutlinePageNum(
+        item: PDOutlineItem,
+        doc: PDDocument
+    ): Int? {
+        val dest = item.destination
+            ?: item.action?.let {
+                try {
+                    (it as? PDActionGoTo)?.destination
+                } catch (_: Exception) { null }
+            }
+        return try {
+            val pageObj = (dest as? PDPageDestination)?.page
+            if (pageObj != null) doc.pages.indexOf(pageObj) + 1 else null
+        } catch (_: Exception) { null }
+    }
+
+    private fun collectOutlineItems(
+        first: PDOutlineItem?,
+        doc: PDDocument,
+        totalPages: Int
+    ): List<Pair<String, Int>> {
+        val result = mutableListOf<Pair<String, Int>>()
+        var item = first
+        while (item != null) {
+            val pageNum = resolveOutlinePageNum(item, doc)
+            if (pageNum != null && pageNum in 1..totalPages) {
+                result += Pair(item.title ?: "Chapter", pageNum)
+            }
+            if (item.hasChildren()) {
+                result.addAll(collectOutlineItems(item.firstChild, doc, totalPages))
+            }
+            item = item.nextSibling
+        }
+        return result
     }
 
     // ── Estratégia 1: Outlines (bookmarks) do PDF ───────────────────────────
@@ -207,28 +393,9 @@ object PdfExtractor {
                 val stripper = PDFTextStripper()
 
                 // Coleta (título, número da página 1-based) dos itens de 1º nível
-                val breaks = mutableListOf<Pair<String, Int>>()
-                var item: PDOutlineItem? = outline.firstChild
-                while (item != null) {
-                    val dest = item.destination
-                        ?: item.action?.let {
-                            try {
-                                (it as? com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionGoTo)?.destination
-                            } catch (_: Exception) { null }
-                        }
-                    val pageNum = try {
-                        val pageObj = dest?.let {
-                            (it as? com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPageDestination)
-                                ?.page
-                        }
-                        if (pageObj != null) doc.pages.indexOf(pageObj) + 1 else null
-                    } catch (_: Exception) { null }
-
-                    if (pageNum != null && pageNum in 1..pages.size)
-                        breaks += Pair(item.title ?: "Capítulo", pageNum)
-
-                    item = item.nextSibling
-                }
+                val breaks = collectOutlineItems(outline.firstChild, doc, pages.size)
+                    .sortedBy { it.second }
+                    .distinctBy { it.second } // mantém o primeiro (PART sobre Chapter na mesma página)
                 doc.close()
 
                 if (breaks.size < 2) return@use emptyList()
@@ -273,11 +440,10 @@ object PdfExtractor {
         "section", "seção", "secção", "sección", "section", "abschnitt"
     )
 
-    private fun tryKeywordRegex(pages: List<PdfPage>): List<PdfChapter> {
-        // (título candidato, índice da página)
+    private fun tryKeywordRegex(pages: List<PdfPage>, tocPageNums: Set<Int> = emptySet()): List<PdfChapter> {
         val breaks = mutableListOf<Pair<String, Int>>()
-
         for ((idx, page) in pages.withIndex()) {
+            if (page.number in tocPageNums) continue   // ← linha adicionada
             val lines = page.text.lines()
             for (line in lines) {
                 val trimmed = line.trim()
@@ -309,10 +475,10 @@ object PdfExtractor {
 
     // ── Estratégia 3: Heurística de formatação ───────────────────────────────
 
-    private fun tryHeuristic(pages: List<PdfPage>): List<PdfChapter> {
+    private fun tryHeuristic(pages: List<PdfPage>, tocPageNums: Set<Int> = emptySet()): List<PdfChapter> {
         val breaks = mutableListOf<Pair<String, Int>>()
-
         for ((idx, page) in pages.withIndex()) {
+            if (page.number in tocPageNums) continue   // ← linha adicionada
             val lines = page.text.lines().map { it.trim() }.filter { it.isNotBlank() }
             if (lines.isEmpty()) continue
 
@@ -359,28 +525,57 @@ object PdfExtractor {
     // ── Utilitário: monta capítulos a partir de lista de quebras ─────────────
 
     /**
-     * breaks: lista de (título, número-de-página-1-based) em ordem crescente.
-     * Agrupa as páginas entre quebras consecutivas em cada capítulo.
+     * Constrói capítulos a partir de uma lista de quebras (título, página 1-based).
+     *
+     * Regras:
+     * - Múltiplas entradas na mesma página → todas recebem o mesmo body (conteúdo compartilhado).
+     * - Se o body do grupo for vazio (página sem texto detectável), todas as entradas são descartadas.
+     * - Isso preserva entradas como "PART 1" e "Chapter 1" apontando para a mesma página,
+     *   enquanto ainda descarta páginas realmente sem texto.
      */
     private fun buildChaptersFromBreaks(
         breaks: List<Pair<String, Int>>,
         pages: List<PdfPage>
     ): List<PdfChapter> {
+        if (breaks.isEmpty()) return emptyList()
         val pageMap = pages.associateBy { it.number }
         val chapters = mutableListOf<PdfChapter>()
 
-        for (i in breaks.indices) {
-            val (title, startPage) = breaks[i]
-            val endPage = if (i + 1 < breaks.size) breaks[i + 1].second - 1 else pages.last().number
+        // Agrupa índices de breaks por página-alvo
+        // Ex: [(PART 1, 5), (Chapter 1, 5), (Chapter 2, 8)] →
+        //     grupo página 5: [0,1], grupo página 8: [2]
+        var i = 0
+        while (i < breaks.size) {
+            val (_, startPage) = breaks[i]
 
+            // Coleta todos os breaks que apontam para a mesma página
+            val groupIndices = mutableListOf(i)
+            var j = i + 1
+            while (j < breaks.size && breaks[j].second == startPage) {
+                groupIndices.add(j)
+                j++
+            }
+
+            // O endPage é determinado pelo próximo break DIFERENTE de startPage
+            val endPage = if (j < breaks.size) breaks[j].second - 1 else pages.last().number
+
+            // Monta o body compartilhado por todas as entradas do grupo
             val body = (startPage..endPage)
                 .mapNotNull { pageMap[it] }
                 .filter { it.text.isNotBlank() }
                 .joinToString("\n\n") { it.text }
 
-            if (body.isNotBlank())
-                chapters += PdfChapter(title, body)
+            // Só cria capítulos se houver conteúdo real
+            if (body.isNotBlank()) {
+                for (idx in groupIndices) {
+                    val (title, _) = breaks[idx]
+                    chapters += PdfChapter(title, body)
+                }
+            }
+
+            i = j
         }
+
         return chapters
     }
 
