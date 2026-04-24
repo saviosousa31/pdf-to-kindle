@@ -1,5 +1,6 @@
 package com.pdfepub.converter
 
+import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
@@ -15,6 +16,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import android.content.ContentUris
 
 object EpubBuilder {
 
@@ -294,16 +296,13 @@ ${textToXhtml(ch.text)}
         tmp
     }
 
-    /** Salva o arquivo de cache para o destino permanente escolhido pelo usuário. */
     fun saveToDestination(context: Context, cacheFile: File, filename: String): Uri {
+        // 1. Pasta personalizada via DocumentFile (prioridade máxima, inalterado)
         val treeUriStr = Prefs.get(context, Prefs.SAVE_PATH)
-
-        // Destino customizado via ACTION_OPEN_DOCUMENT_TREE
         if (treeUriStr.isNotBlank()) {
             val treeUri = Uri.parse(treeUriStr)
             val docTree = DocumentFile.fromTreeUri(context, treeUri)
             if (docTree != null && docTree.canWrite()) {
-                // Remove arquivo anterior com mesmo nome se existir
                 docTree.findFile(filename)?.delete()
                 val newDoc = docTree.createFile("application/epub+zip", filename)
                     ?: throw Exception("Não foi possível criar arquivo no diretório selecionado.")
@@ -314,55 +313,29 @@ ${textToXhtml(ch.text)}
             }
         }
 
-        // Fallback: Downloads padrão
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // 2. Salva via File direto — funciona em todas as versões sem MediaStore insert
+        @Suppress("DEPRECATION")
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        downloadsDir.mkdirs()
+        val destFile = File(downloadsDir, filename)
+        cacheFile.copyTo(destFile, overwrite = true)
 
-            // Verifica se já existe um arquivo com o mesmo nome
-            val existingUri = context.contentResolver.query(
-                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                arrayOf(MediaStore.Downloads._ID),
-                "${MediaStore.Downloads.DISPLAY_NAME} = ?",
-                arrayOf(filename),
-                null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    android.content.ContentUris.withAppendedId(
-                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                        cursor.getLong(0)
-                    )
-                } else null
-            }
+        // 3. Notifica o MediaStore via scan (sem INSERT manual — o scanner faz o upsert internamente)
+        android.media.MediaScannerConnection.scanFile(
+            context,
+            arrayOf(destFile.absolutePath),
+            arrayOf("application/epub+zip"),
+            null
+        )
 
-            val uri = if (existingUri != null) {
-                // Sobrescreve o existente
-                existingUri
-            } else {
-                val cv = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, filename)
-                    put(MediaStore.Downloads.MIME_TYPE, "application/epub+zip")
-                    put(MediaStore.Downloads.IS_PENDING, 1)
-                }
-                context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
-                    ?: throw Exception("Falha ao criar arquivo em Downloads")
-            }
-
-            context.contentResolver.openOutputStream(uri, "wt")?.use { out ->
-                cacheFile.inputStream().use { it.copyTo(out) }
-            }
-
-            if (existingUri == null) {
-                val cv = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
-                context.contentResolver.update(uri, cv, null, null)
-            }
-
-            uri
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                destFile
+            )
         } else {
-            @Suppress("DEPRECATION")
-            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            dir.mkdirs()
-            val dest = File(dir, filename)
-            cacheFile.copyTo(dest, overwrite = true)
-            Uri.fromFile(dest)
+            Uri.fromFile(destFile)
         }
     }
 
