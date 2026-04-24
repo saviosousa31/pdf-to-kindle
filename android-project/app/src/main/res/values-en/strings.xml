@@ -118,4 +118,5 @@
     <string name="help_apppassword_title_icon">🔑  How to create a Gmail App Password</string>
     <string name="test_connection_fail">Could not connect.\nCheck host, port and connection.\n\nDetail: %1$s</string>
     <string name="btn_view_epub">👁  Preview EPUB</string>
+    <string name="progress_detecting_chapters">Detecting chapters…</string>
 </resources>

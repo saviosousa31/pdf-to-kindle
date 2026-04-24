@@ -43,6 +43,7 @@
     <string name="mounting_epub">Montando EPUB… %1$d/%2$d</string>
     <string name="cd_settings">Configurações</string>
     <string name="btn_view_epub">👁  Visualizar EPUB</string>
+    <string name="progress_detecting_chapters">Identificando capítulos…</string>
 
     <!-- Settings Activity -->
     <string name="settings_title">Configurações</string>

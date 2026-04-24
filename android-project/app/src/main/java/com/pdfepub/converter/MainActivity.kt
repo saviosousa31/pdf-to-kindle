@@ -342,7 +342,15 @@ class MainActivity : AppCompatActivity() {
                     tvProgress.text = getString(R.string.progress_page, cur, tot)
                 }
 
-                val chapters = PdfExtractor.groupIntoChapters(pages)
+                progressConvert.isIndeterminate = true
+                tvProgress.text = getString(R.string.progress_detecting_chapters)
+
+                val chapters = PdfExtractor.groupIntoChapters(
+                    context = this@MainActivity, uri = uri, pages = pages
+                )
+
+                progressConvert.isIndeterminate = false
+                progressConvert.progress = offsetEnd
                 tvProgress.text = getString(R.string.progress_organizing, chapters.size)
 
                 epubFilename = buildString {
