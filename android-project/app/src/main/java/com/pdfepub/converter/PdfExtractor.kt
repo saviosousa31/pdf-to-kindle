@@ -71,6 +71,9 @@ object PdfExtractor {
             chapters = tryOutlines(context, uri, cleanPages)
 
         if (chapters.size < 2)
+            chapters = trySummaryPage(cleanPages)
+
+        if (chapters.size < 2)
             chapters = tryKeywordRegex(cleanPages, tocPageNums)
 
         if (chapters.size < 2)
@@ -106,15 +109,23 @@ object PdfExtractor {
                 }
 
                 var insideToc = false
+                var consecutiveEmptyAfterToc = 0
 
                 for (pageIdx in 0 until minOf(searchUpTo, totalPages)) {
                     val pdPage = try { doc.getPage(pageIdx) } catch (_: Exception) { continue }
                     val annotations = try { pdPage.annotations } catch (_: Exception) { null }
 
+                    // Trecho 1 — annotations nulas/vazias
                     if (annotations.isNullOrEmpty()) {
-                        if (insideToc) break
+                        if (insideToc) {
+                            // Tolera até 2 páginas consecutivas sem anotações dentro do TOC
+                            // antes de desistir (cobre sumários em 2 páginas)
+                            consecutiveEmptyAfterToc++
+                            if (consecutiveEmptyAfterToc > 2) break
+                        }
                         continue
                     }
+                    consecutiveEmptyAfterToc = 0
 
                     // Coleta links que apontam para frente, com posição Y (para ordenação)
                     val forwardLinks = mutableListOf<Pair<PDRectangle, Int>>() // (rect, destPage 1-based)
@@ -145,14 +156,22 @@ object PdfExtractor {
 
                         if (targetPageNum != null && targetPageNum in 1..totalPages) {
                             val rect = try { link.rectangle } catch (_: Exception) { null } ?: continue
+                            val linkHeight = rect.upperRightY - rect.lowerLeftY
+                            val linkWidth  = rect.upperRightX - rect.lowerLeftX
+                            if (linkHeight < 12f || linkWidth < 8f) continue
                             forwardLinks.add(Pair(rect, targetPageNum))
                         }
                     }
 
+                    // Trecho 2 — forwardLinks vazio
                     if (forwardLinks.isEmpty()) {
-                        if (insideToc) break
+                        if (insideToc) {
+                            consecutiveEmptyAfterToc++
+                            if (consecutiveEmptyAfterToc > 2) break
+                        }
                         continue
                     }
+                    consecutiveEmptyAfterToc = 0
 
                     // Ordena de cima para baixo (Y maior = mais alto na página em coordenadas PDF)
                     val sortedLinks = forwardLinks.sortedByDescending { it.first.lowerLeftY }
@@ -180,7 +199,7 @@ object PdfExtractor {
                     try { areaStripper.extractRegions(pdPage) } catch (_: Exception) { }
 
                     val currentBreaks = mutableListOf<Pair<String, Int>>()
-                    sortedLinks.forEachIndexed { i, (linkRect, targetPageNum) ->
+                    sortedLinks.forEachIndexed { i, (_, targetPageNum) ->
                         val rawText = try {
                             areaStripper.getTextForRegion("link_$i") ?: ""
                         } catch (_: Exception) { "" }
@@ -188,31 +207,32 @@ object PdfExtractor {
                             .replace(Regex("""\r?\n"""), " ")
                             .replace(Regex("""\t+"""), " ")
                             .replace(Regex("""\s+"""), " ")
-
-                        // Se a área retornou texto válido, usa direto
-                        // Caso contrário, tenta encontrar a linha correspondente no texto da página pelo Y
-                        val areaTitle = cleanTocEntryTitle(rawLine)
-
-                        val title = if (areaTitle.isNotBlank()) {
-                            areaTitle
-                        } else {
-                            findClosestLineByY(
-                                pageText = pages.getOrNull(pageIdx)?.text ?: "",
-                                linkCenterY = linkRect.lowerLeftY + linkRect.height / 2f,
-                                pageHeight = pageHeight
-                            )
-                        }
-
-                        if (title.isNotBlank() && title.length <= 150) {
-                            currentBreaks.add(Pair(title, targetPageNum))
+                        val title = cleanTocEntryTitle(rawLine)
+                        // Ignora títulos que são referências de nota de rodapé: "[1]", "[2]", "[10]", etc.
+                        val isFootnoteRef = title.matches(Regex("""^\[\d{1,3}]\.?$"""))
+                        if (title.isNotBlank() && title.length <= 150 && !isFootnoteRef) {
+                            val last = currentBreaks.lastOrNull()
+                            val isFirstPartOfSplitTitle = last != null &&
+                                    last.second == targetPageNum && (
+                                    last.first.matches(Regex("""^\d{1,4}$|^[IVXLCDMivxlcdm]{1,6}$""")) ||
+                                            last.first.matches(Regex("""(?i)^(cap[íi]tulo|chapter|parte|part|se[çc][ãa]o|section)\s+\S+$"""))
+                                    )
+                            if (isFirstPartOfSplitTitle) {
+                                currentBreaks[currentBreaks.lastIndex] = Pair("${last!!.first} – $title", targetPageNum)
+                            } else {
+                                currentBreaks.add(Pair(title, targetPageNum))
+                            }
                         }
                     }
 
+                    // Trecho 3 — currentBreaks após extração
                     if (currentBreaks.isNotEmpty()) {
                         insideToc = true
+                        consecutiveEmptyAfterToc = 0
                         allBreaks.addAll(currentBreaks)
                     } else if (insideToc) {
-                        break
+                        consecutiveEmptyAfterToc++
+                        if (consecutiveEmptyAfterToc > 2) break
                     }
                 }
                 doc.close()
@@ -223,6 +243,7 @@ object PdfExtractor {
 
         return allBreaks
             .sortedBy { it.second }
+            .let { mergeBreaksBySamePage(it) }
             .let { buildChaptersFromBreaks(it, pages) }
     }
 
@@ -269,6 +290,58 @@ object PdfExtractor {
     }
 
     /**
+     * Tenta extrair um título do início de uma linha que pode estar "colada" ao corpo do texto
+     * sem espaço separador (ex: PDFs com codificação problemática).
+     *
+     * Estratégia:
+     * 1. Se a linha já é curta (≤60 chars), devolve ela mesma — caminho normal.
+     * 2. Se a linha começa com uma palavra-chave de capítulo conhecida seguida diretamente
+     *    por texto (sem espaço), extrai apenas a parte que corresponde à palavra-chave
+     *    (com número opcional).
+     * 3. Se a linha começa com um bloco de letras maiúsculas seguido por letra minúscula
+     *    grudada (ex: "INTRODUÇÃOEste texto..."), extrai o bloco maiúsculo como título.
+     * 4. Se não se encaixa em nenhum padrão, devolve a linha original (será filtrada
+     *    pelo isShort check no tryHeuristic).
+     */
+    private fun extractLeadingTitle(line: String): String {
+        if (line.length <= 60) return line
+
+        // Padrão 1: palavra-chave conhecida colada ao corpo
+        // Ex: "PrefácioDeveriaescrever" → "Prefácio"
+        // Ex: "Introdução Verdade" com ou sem espaço → "Introdução"
+        // Ex: "SEGUNDA PARTEIntrodução..." → "SEGUNDA PARTE"
+        val keywordPattern = Regex(
+            """^(?i)(prefácio|prefacio|introdução|introducao|introduction|preface|""" +
+                    """epilogo|epílogo|epilogue|prólogo|prologue|prologo|""" +
+                    """agradecimentos|acknowledgments|dedicatória|dedicatoria|dedication|""" +
+                    """apêndice|apendice|appendix|anexo|notas?|notes?|bibliografia|bibliography|""" +
+                    """conclus[ãa]o|conclusion|""" +
+                    """(?:segunda|terceira|quarta|quinta|segunda|first|second|third)\s+parte|""" +
+                    """parte\s+[ivxlcdm\d]+|part\s+[ivxlcdm\d]+|""" +
+                    """cap[íi]tulo\s*\d*|chapter\s*\d*)""",
+            RegexOption.IGNORE_CASE
+        )
+        val kwMatch = keywordPattern.find(line)
+        if (kwMatch != null && kwMatch.range.first == 0) {
+            val extracted = kwMatch.value.trim()
+            if (extracted.length in 2..60) return extracted
+        }
+
+        // Padrão 2: sequência em MAIÚSCULAS colada a texto minúsculo
+        // Ex: "INTRODUÇÃOEste é o texto..." → "INTRODUÇÃO"
+        // Ex: "SEGUNDA PARTEIniciamos..." → "SEGUNDA PARTE"
+        val upperPattern = Regex("""^([A-ZÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ][A-ZÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ\s]{1,58}?)(?=[a-záàâãäéèêëíìîïóòôõöúùûüçñ])""")
+        val upperMatch = upperPattern.find(line)
+        if (upperMatch != null) {
+            val extracted = upperMatch.value.trim()
+            if (extracted.length in 2..60) return extracted
+        }
+
+        // Nenhum padrão encontrado — devolve original (será descartado por isShort)
+        return line
+    }
+
+    /**
      * Mescla entradas do TOC que apontam para a mesma página.
      * Regra: mantém o PRIMEIRO título (nível mais alto, ex: "PART 1"),
      * descartando os demais que redirecionam para a mesma página.
@@ -285,10 +358,8 @@ object PdfExtractor {
         for (i in 1 until breaks.size) {
             val next = breaks[i]
             if (next.second == current.second) {
-                // Mesma página: mantém o primeiro (nível mais alto)
-                // Se quiser combinar os títulos, use:
-                // current = Pair("${current.first} – ${next.first}", current.second)
-                // Por padrão, apenas descartamos o segundo:
+                // Mesma página: mantém o primeiro (nível mais alto, ex: PART sobre Chapter)
+                // NÃO funde os títulos — apenas descarta o segundo
                 continue
             }
             result.add(current)
@@ -309,7 +380,10 @@ object PdfExtractor {
         val pureChapterLine = Regex(
             """(?i)^(chapter|ch\.?|part|section|prologue|epilogue|preface|introduction|appendix|""" +
                     """capítulo|chapitre|kapitel|capitolo|prologo|epilogo|préface|vorwort|einleitung|prefazione)""" +
-                    """\s*[\dIVXLCDM]{0,6}\s*$"""
+                    """(\s*[\dIVXLCDM]{0,6}|\s+(um|dois|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|""" +
+                    """treze|catorze|quatorze|quinze|dezesseis|dezasseis|dezessete|dezoito|dezenove|vinte|""" +
+                    """one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|""" +
+                    """sixteen|seventeen|eighteen|nineteen|twenty)(\s+e\s+\S+)?)?\s*$"""
         )
 
         for (i in 0 until minOf(searchUpTo, pages.size)) {
@@ -333,10 +407,18 @@ object PdfExtractor {
      * retornando apenas o título limpo.
      */
     private fun cleanTocEntryTitle(line: String): String {
-        return line
-            .replace(Regex("""[·.•\-]{2,}\s*\d{1,4}\s*$"""), "") // "Título ....... 42" → "Título"
-            .replace(Regex("""\s{2,}\d{1,4}\s*$"""), "")          // "Título    42" → "Título"
+        val result = line
+            .replace(Regex("""[·.•\-]{2,}\s*\d{1,4}\s*$"""), "")  // "Título ....... 42" → "Título"
+            .replace(Regex("""\s{2,}\d{1,4}\s*$"""), "")            // "Título   42" → "Título"
+            .trimStart('.', '·', '•', ' ')                           // ". Título" → "Título"
             .trim()
+
+        // Se ficou vazio mas havia conteúdo antes dos pontos-guia, recupera
+        if (result.isBlank() && line.isNotBlank()) {
+            val beforeDots = line.replace(Regex("""[·.•]{3,}.*$"""), "").trimStart('.', '·', '•', ' ').trim()
+            if (beforeDots.isNotBlank()) return beforeDots
+        }
+        return result
     }
 
     private fun resolveOutlinePageNum(
@@ -355,20 +437,28 @@ object PdfExtractor {
         } catch (_: Exception) { null }
     }
 
-    private fun collectOutlineItems(
-        first: PDOutlineItem?,
-        doc: PDDocument,
-        totalPages: Int
-    ): List<Pair<String, Int>> {
+    private fun collectOutlineItems(first: PDOutlineItem?, doc: PDDocument, totalPages: Int): List<Pair<String, Int>> {
         val result = mutableListOf<Pair<String, Int>>()
         var item = first
         while (item != null) {
             val pageNum = resolveOutlinePageNum(item, doc)
             if (pageNum != null && pageNum in 1..totalPages) {
-                result += Pair(item.title ?: "Chapter", pageNum)
-            }
-            if (item.hasChildren()) {
-                result.addAll(collectOutlineItems(item.firstChild, doc, totalPages))
+                val title = item.title?.trim() ?: "Chapter"
+
+                // Ignora referências de nota: "[1]", "[2].", etc.
+                val isFootnoteRef = title.matches(Regex("""^\[\d{1,3}\].*"""))
+
+                // Ignora bookmarks de páginas administrativas sem conteúdo narrativo
+                val isAdminPage = title.matches(
+                    Regex("""(?i)^(folha de rosto|ficha catalográfica|copyright|créditos|dados de catalogação|cip|isbn|dados internacionais).*""")
+                )
+
+                if (!isFootnoteRef && !isAdminPage) {
+                    result += Pair(title, pageNum)
+                }
+
+                // ← NÃO desce em filhos (hasChildren removido intencionalmente)
+                // Filhos são notas de rodapé ou sub-seções que não fazem parte do sumário principal
             }
             item = item.nextSibling
         }
@@ -377,33 +467,89 @@ object PdfExtractor {
 
     // ── Estratégia 1: Outlines (bookmarks) do PDF ───────────────────────────
 
-    private fun tryOutlines(
-        context: Context,
-        uri: Uri,
-        pages: List<PdfPage>
-    ): List<PdfChapter> {
+    private fun tryOutlines(context: Context, uri: Uri, pages: List<PdfPage>): List<PdfChapter> {
         if (pages.isEmpty()) return emptyList()
-
         return try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 val doc = PDDocument.load(stream)
                 val outline = doc.documentCatalog?.documentOutline
                     ?: return@use emptyList<PdfChapter>()
-
                 val stripper = PDFTextStripper()
-
-                // Coleta (título, número da página 1-based) dos itens de 1º nível
                 val breaks = collectOutlineItems(outline.firstChild, doc, pages.size)
                     .sortedBy { it.second }
                     .distinctBy { it.second } // mantém o primeiro (PART sobre Chapter na mesma página)
                 doc.close()
-
                 if (breaks.size < 2) return@use emptyList()
-                buildChaptersFromBreaks(breaks, pages)
+                buildChaptersFromBreaks(breaks, pages) ?: emptyList()
             } ?: emptyList()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             emptyList()
         }
+    }
+
+    // ── Estratégia 1.5: Parseia sumário textual da página ───────────────────
+
+    /**
+     * Detecta se uma página é um sumário/índice pelo padrão
+     * "Título ..... número_de_página" presente em >= 40% das linhas.
+     */
+    private fun isTocPage(text: String): Boolean {
+        val lines = text.lines().map { it.trim() }.filter { it.isNotBlank() }
+        if (lines.size < 4) return false
+        val tocPattern = Regex("""^.+[·.\u2022\-]{2,}\s*\d{1,4}\s*$""")
+        val tocSpaces  = Regex("""^.+\s{2,}\d{1,4}\s*$""")
+        val count = lines.count { tocPattern.matches(it) || tocSpaces.matches(it) }
+        return count >= 4 && count.toFloat() / lines.size >= 0.40f
+    }
+
+    /**
+     * Parseia as entradas de uma página de sumário e retorna (título, número_de_página).
+     * Suporta separador por pontos-guia ("Título ..... 42") e por espaços ("Título     42").
+     */
+    private fun parseTocPage(text: String): List<Pair<String, Int>> {
+        val results = mutableListOf<Pair<String, Int>>()
+        val tocEntry    = Regex("""^(.+?)\s*[·.\u2022\-]{2,}\s*(\d{1,4})\s*$""")
+        val tocSpaces   = Regex("""^(.+?)\s{2,}(\d{1,4})\s*$""")
+        val skipPattern = Regex("""(?i)^(sumário|índice|contents|table of contents|índice geral|\d{1,4})$""")
+
+        for (line in text.lines().map { it.trim() }.filter { it.isNotBlank() }) {
+            if (skipPattern.matches(line)) continue
+            val m = tocEntry.find(line) ?: tocSpaces.find(line) ?: continue
+            val title   = m.groupValues[1].replace(Regex("""[·.\u2022]{2,}\s*$"""), "").trim()
+            val pageNum = m.groupValues[2].toIntOrNull() ?: continue
+            if (title.length >= 2) results += Pair(title, pageNum)
+        }
+        return results
+    }
+
+    /**
+     * Estratégia: detecta páginas de sumário nas primeiras 20% do livro,
+     * parseia os pares (título, página) e usa diretamente para montar os capítulos.
+     * Mais confiável que varrer o corpo do texto para PDFs sem links/bookmarks.
+     */
+    private fun trySummaryPage(pages: List<PdfPage>): List<PdfChapter> {
+        if (pages.isEmpty()) return emptyList()
+
+        val searchUpTo = minOf(pages.size, maxOf(5, (pages.size * 0.20).toInt()))
+
+        // Coleta páginas que parecem sumário
+        val tocPageIndices = (0 until searchUpTo).filter { isTocPage(pages[it].text) }
+        if (tocPageIndices.isEmpty()) return emptyList()
+
+        // Parseia todas as páginas de sumário combinadas
+        val combinedText = tocPageIndices.joinToString("\n") { pages[it].text }
+        val rawBreaks = parseTocPage(combinedText)
+        if (rawBreaks.size < 2) return emptyList()
+
+        // Filtra páginas dentro dos limites e remove duplicatas (mantém o primeiro por página)
+        val totalPages = pages.last().number
+        val seenPages  = mutableSetOf<Int>()
+        val breaks = rawBreaks
+            .filter { (_, pg) -> pg in 1..totalPages }
+            .filter { (_, pg) -> seenPages.add(pg) }
+
+        if (breaks.size < 2) return emptyList()
+        return buildChaptersFromBreaks(breaks, pages)
     }
 
     // ── Estratégia 2: Regex de palavras-chave multilíngue ───────────────────
@@ -412,6 +558,7 @@ object PdfExtractor {
     private val CHAPTER_KEYWORDS = listOf(
         // Português
         "capítulo", "capitulo", "parte", "livro", "seção", "secção", "prólogo", "epilogo", "epílogo",
+        "agradecimentos", "dedicatória", "dedicatoria",
         // Inglês
         "chapter", "part", "book", "section", "prologue", "epilogue", "preface", "introduction",
         // Espanhol
@@ -440,10 +587,24 @@ object PdfExtractor {
         "section", "seção", "secção", "sección", "section", "abschnitt"
     )
 
+    // Adicione esta regex como constante no objeto PdfExtractor
+    private val KEYWORD_LINE_WRITTEN = Regex(
+        """^(agradecimentos|dedicat[oó]ria|acknowledgments|dedication|""" +
+                """ep[ií]logo|epilogue|prol[oó]go|prologue|prefácio|preface|introduction|introdução|""" +
+                """cap[íi]tulo|chapter|parte|part)\s*""" +
+                """(um|dois|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|""" +
+                """dezesseis|dezasseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|""" +
+                """one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|""" +
+                """sixteen|seventeen|eighteen|nineteen|twenty|thirty)?""" +
+                """(\s+(e\s+)?(um|dois|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|one|two|three|four|five|""" +
+                """six|seven|eight|nine|ten))?[.\s\-–—:]{0,3}$""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE)
+    )
+
     private fun tryKeywordRegex(pages: List<PdfPage>, tocPageNums: Set<Int> = emptySet()): List<PdfChapter> {
         val breaks = mutableListOf<Pair<String, Int>>()
         for ((idx, page) in pages.withIndex()) {
-            if (page.number in tocPageNums) continue   // ← linha adicionada
+            if (page.number in tocPageNums) continue
             val lines = page.text.lines()
             for (line in lines) {
                 val trimmed = line.trim()
@@ -451,7 +612,14 @@ object PdfExtractor {
                 if (Regex("""(?i)\b(?:https?://|www\.)\S+""").containsMatchIn(trimmed)) continue
                 if (Regex("""(?i)\b[a-z0-9-]+(?:\.[a-z]{2,})+\b""").containsMatchIn(trimmed)) continue
 
-                val matchResult = KEYWORD_LINE.find(trimmed) ?: continue
+                val matchResult = KEYWORD_LINE.find(trimmed)
+                    ?: if (KEYWORD_LINE_WRITTEN.containsMatchIn(trimmed)) {
+                        if (breaks.isEmpty() || breaks.last().second != idx)
+                            breaks += Pair(trimmed, idx)
+                        break
+                    } else null
+
+                if (matchResult == null) continue
                 val hasNumber = matchResult.groupValues[2].isNotBlank()
                 val keyword = matchResult.groupValues[1].lowercase().trim()
 
@@ -468,7 +636,6 @@ object PdfExtractor {
 
         if (breaks.size < 2) return emptyList()
 
-        // Converte índices (0-based) para números de página (1-based)
         val breaksWithPageNum = breaks.map { (title, idx) -> Pair(title, pages[idx].number) }
         return buildChaptersFromBreaks(breaksWithPageNum, pages)
     }
@@ -478,20 +645,28 @@ object PdfExtractor {
     private fun tryHeuristic(pages: List<PdfPage>, tocPageNums: Set<Int> = emptySet()): List<PdfChapter> {
         val breaks = mutableListOf<Pair<String, Int>>()
         for ((idx, page) in pages.withIndex()) {
-            if (page.number in tocPageNums) continue   // ← linha adicionada
+            if (page.number in tocPageNums) continue
             val lines = page.text.lines().map { it.trim() }.filter { it.isNotBlank() }
             if (lines.isEmpty()) continue
 
-            val candidate = lines.first()    // Primeira linha não-vazia da página
+            val rawCandidate = lines.first()
+            val candidate = extractLeadingTitle(rawCandidate)
 
-            val isShort         = candidate.length in 2..60
-            val isUppercase     = candidate == candidate.uppercase() && candidate.any { it.isLetter() }
-            val startsWithNum   = candidate.matches(Regex("""^\d{1,3}[.\s\-–].*"""))
+            // Filtro 1: referências de nota "[1]", "[2].", etc.
+            if (candidate.matches(Regex("""^\[\d{1,3}\]\.?.*"""))) continue
+
+            // Filtro 2: número isolado não é título
+            if (candidate.matches(Regex("""^\d{1,3}$"""))) continue
+
+            val isShort = candidate.length in 2..60
+            val isUppercase = candidate == candidate.uppercase() && candidate.any { it.isLetter() }
+            val isDialogue = candidate.startsWith("-") || candidate.startsWith("—") || candidate.startsWith("–")
+            val looksLikeBibRef = candidate.matches(Regex(""".*\(\d{4}\s*[–—\-].*\).*"""))
+            val startsWithNum = candidate.matches(Regex("""^\d{1,3}[\.\s\-–].*"""))
             val startsWithRoman = ROMAN.matches(candidate.split(Regex("[.\\s\\-–]")).first())
-            val looksLikeTitle  = isUppercase || startsWithNum || startsWithRoman
+            val looksLikeTitle = (isUppercase || startsWithNum || startsWithRoman) && !looksLikeBibRef && !isDialogue
 
             if (isShort && looksLikeTitle) {
-                // Confirma: o restante da página tem conteúdo real (para descartar páginas em branco)
                 val bodyLines = lines.drop(1)
                 val bodyWords = bodyLines.sumOf { it.split(Regex("\\s+")).size }
                 if (bodyWords >= 20) {
@@ -522,6 +697,74 @@ object PdfExtractor {
         return chapters
     }
 
+    /**
+     * Remove o título do início do texto bruto de uma página de forma segura,
+     * tratando inconsistências de normalização Unicode (NFC vs NFD) entre
+     * o título detectado e o texto bruto extraído pelo PDFBox.
+     *
+     * - Se o título ocupa a primeira linha inteira → remove essa linha
+     * - Se o título está colado ao início do texto → NÃO remove (evita cortar letras)
+     * - Se separado por espaço/newline → remove o título + separador
+     */
+    private fun stripTitleFromPageText(pageText: String, title: String): String {
+        if (title.isBlank()) return pageText
+        val t = pageText.trimStart()
+        if (t.isBlank()) return t
+
+        // Normaliza ambos para NFC
+        val tNfc = Normalizer.normalize(t, Normalizer.Form.NFC)
+        val titleNfc = Normalizer.normalize(title.trim(), Normalizer.Form.NFC)
+
+        // Caso 1: título ocupa a primeira linha inteira (separado por \n)
+        // Busca o \n na string NFC e usa o mesmo índice na string original
+        val firstNewlineNfc = tNfc.indexOf('\n')
+        if (firstNewlineNfc > 0) {
+            val firstLineNfc = tNfc.substring(0, firstNewlineNfc).trim()
+            if (firstLineNfc.equals(titleNfc, ignoreCase = true)) {
+                // Usa o índice da string original (não da NFC) para evitar deslocamento
+                val firstNewlineOrig = t.indexOf('\n')
+                return if (firstNewlineOrig >= 0) t.substring(firstNewlineOrig + 1).trimStart() else t
+            }
+        }
+
+        // Caso 2: título seguido de separador na string NFC
+        if (tNfc.startsWith(titleNfc, ignoreCase = true)) {
+            val afterIdxNfc = titleNfc.length
+            if (afterIdxNfc < tNfc.length) {
+                val charAfter = tNfc[afterIdxNfc]
+                if (charAfter == ' ' || charAfter == '\n' || charAfter == '\r' || charAfter == '\t') {
+                    // IMPORTANTE: retorna a partir da string ORIGINAL usando o \n ou espaço
+                    // encontrado na posição equivalente — não usa substring do tNfc
+                    val separatorInOrig = when (charAfter) {
+                        '\n' -> t.indexOf('\n')
+                        '\r' -> t.indexOf('\r')
+                        ' ', '\t' -> {
+                            // Encontra o primeiro separador após o título na string original
+                            // Avança char a char até sair do bloco do título
+                            var idx = 0
+                            var nfcConsumed = 0
+                            while (idx < t.length && nfcConsumed < afterIdxNfc) {
+                                val ch = t[idx]
+                                val chNfc = Normalizer.normalize(ch.toString(), Normalizer.Form.NFC)
+                                nfcConsumed += chNfc.length
+                                idx++
+                            }
+                            idx // posição logo após o título na string original
+                        }
+                        else -> -1
+                    }
+                    if (separatorInOrig >= 0 && separatorInOrig < t.length) {
+                        return t.substring(separatorInOrig).trimStart()
+                    }
+                }
+            }
+            // Título colado diretamente ao corpo (sem separador) → NÃO remove
+            return t
+        }
+
+        return t
+    }
+
     // ── Utilitário: monta capítulos a partir de lista de quebras ─────────────
 
     /**
@@ -533,17 +776,14 @@ object PdfExtractor {
      * - Isso preserva entradas como "PART 1" e "Chapter 1" apontando para a mesma página,
      *   enquanto ainda descarta páginas realmente sem texto.
      */
-    private fun buildChaptersFromBreaks(
-        breaks: List<Pair<String, Int>>,
-        pages: List<PdfPage>
-    ): List<PdfChapter> {
+    private fun buildChaptersFromBreaks(breaks: List<Pair<String, Int>>, pages: List<PdfPage>): List<PdfChapter> {
         if (breaks.isEmpty()) return emptyList()
         val pageMap = pages.associateBy { it.number }
         val chapters = mutableListOf<PdfChapter>()
 
         // Agrupa índices de breaks por página-alvo
-        // Ex: [(PART 1, 5), (Chapter 1, 5), (Chapter 2, 8)] →
-        //     grupo página 5: [0,1], grupo página 8: [2]
+        // Ex: [("PART 1", 5), ("Chapter 1", 5), ("Chapter 2", 8)] →
+        //     grupo página 5 → [0,1], grupo página 8 → [2]
         var i = 0
         while (i < breaks.size) {
             val (_, startPage) = breaks[i]
@@ -560,10 +800,17 @@ object PdfExtractor {
             val endPage = if (j < breaks.size) breaks[j].second - 1 else pages.last().number
 
             // Monta o body compartilhado por todas as entradas do grupo
+            val titleForStrip = breaks[groupIndices.first()].first
+
             val body = (startPage..endPage)
                 .mapNotNull { pageMap[it] }
                 .filter { it.text.isNotBlank() }
-                .joinToString("\n\n") { it.text }
+                .mapIndexed { pageIndex, pdfPage ->
+                    if (pageIndex == 0) stripTitleFromPageText(pdfPage.text, titleForStrip)
+                    else pdfPage.text
+                }
+                .filter { it.isNotBlank() }
+                .joinToString("\n")
 
             // Só cria capítulos se houver conteúdo real
             if (body.isNotBlank()) {
@@ -572,10 +819,8 @@ object PdfExtractor {
                     chapters += PdfChapter(title, body)
                 }
             }
-
             i = j
         }
-
         return chapters
     }
 
