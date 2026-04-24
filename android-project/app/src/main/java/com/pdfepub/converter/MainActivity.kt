@@ -457,6 +457,13 @@ class MainActivity : AppCompatActivity() {
         btnConvert.isEnabled        = true
         btnEmail.text               = getString(R.string.btn_email)
         updateUI()
+
+        // Abre o seletor de PDF automaticamente
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/pdf"
+        }, PDF_PICK)
     }
 
     private fun deleteCacheFile() {
